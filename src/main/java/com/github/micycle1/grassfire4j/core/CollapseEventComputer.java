@@ -3,6 +3,7 @@ package com.github.micycle1.grassfire4j.core;
 import static com.github.micycle1.grassfire4j.core.Core.ccw;
 import static com.github.micycle1.grassfire4j.core.Core.cw;
 import static com.github.micycle1.grassfire4j.geom.Geom.STOP_EPS;
+import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
 import static com.github.micycle1.grassfire4j.geom.Geom.getUniqueTimes;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
 
@@ -150,8 +151,13 @@ public class CollapseEventComputer {
 		return e;
 	}
 
-	private static double[] sideD2(KineticVertex o, KineticVertex d, KineticVertex a, double t) {
-		return new double[]{ d.distance2At(a, t), a.distance2At(o, t), o.distance2At(d, t) };
+	private static void sideD2(KineticVertex o, KineticVertex d, KineticVertex a, double t, double[] out) {
+		Vector2D po = o.positionAt(t);
+		Vector2D pd = d.positionAt(t);
+		Vector2D pa = a.positionAt(t);
+		out[0] = dist2(pd, pa);
+		out[1] = dist2(pa, po);
+		out[2] = dist2(po, pd);
 	}
 
 	private static Event edgeEvt(KineticTriangle t, double time, List<Integer> sides) { return new Event(time, t, sides, EventType.EDGE, t.getType()); }
@@ -160,10 +166,11 @@ public class CollapseEventComputer {
 
 	private static Event finite0(KineticTriangle tri, double now, boolean strictGt) {
 		KineticVertex o = (KineticVertex)tri.vertices[0], d = (KineticVertex)tri.vertices[1], a = (KineticVertex)tri.vertices[2];
+		double[] d2 = new double[3];
 		double[] tArea = areaCollapseTimes(o, d, a, now);
 		for (double t : tArea) {
 			if (nearZero(Math.abs(t - now))) {
-				double[] d2 = sideD2(o, d, a, now);
+				sideD2(o, d, a, now, d2);
 				List<Integer> zeros = new ArrayList<>();
 				for (int i=0; i<3; i++) {
 					if (nearZero(Math.sqrt(d2[i]))) {
@@ -198,11 +205,11 @@ public class CollapseEventComputer {
 		}
 		if (!Double.isNaN(te) && !Double.isNaN(ta) && nearZero(Math.abs(te - ta))) {
 			// Python tie-break: try classify as edge by relative-min; else flip.
-			double[] d2t = sideD2(o, d, a, te);
-			double m = Math.min(d2t[0], Math.min(d2t[1], d2t[2]));
+			sideD2(o, d, a, te, d2);
+			double m = Math.min(d2[0], Math.min(d2[1], d2[2]));
 			List<Integer> relMin = new ArrayList<>();
 			for (int i=0; i<3; i++) {
-				if (nearZero(d2t[i] - m)) {
+				if (nearZero(d2[i] - m)) {
 					relMin.add(i);
 				}
 			}
@@ -213,16 +220,16 @@ public class CollapseEventComputer {
 				return edgeEvt(tri, te, List.of(relMin.get(0)));
 			}
 			// otherwise fall back to flip using area time (same)
-			double[] d2a = sideD2(o, d, a, ta);
-			int mx = d2a[0] > d2a[1] ? (d2a[0] > d2a[2] ? 0 : 2) : (d2a[1] > d2a[2] ? 1 : 2);
+			sideD2(o, d, a, ta, d2);
+			int mx = d2[0] > d2[1] ? (d2[0] > d2[2] ? 0 : 2) : (d2[1] > d2[2] ? 1 : 2);
 			return flipEvt(tri, ta, mx);
 		}
 
 		if (!Double.isNaN(ta) && (Double.isNaN(te) || ta < te)) {
-			double[] d2 = sideD2(o, d, a, ta);
+			sideD2(o, d, a, ta, d2);
 			return flipEvt(tri, ta, d2[0] > d2[1] ? (d2[0] > d2[2] ? 0 : 2) : (d2[1] > d2[2] ? 1 : 2));
 		}
-		double[] d2 = sideD2(o, d, a, te);
+		sideD2(o, d, a, te, d2);
 		List<Integer> zeros = new ArrayList<>();
 		for (int i=0; i<3; i++) {
 			if (nearZero(d2[i])) {
@@ -240,6 +247,7 @@ public class CollapseEventComputer {
 
 	private static Event finite1(KineticTriangle tri, double now, boolean strictGt) {
 		KineticVertex o = (KineticVertex)tri.vertices[0], d = (KineticVertex)tri.vertices[1], a = (KineticVertex)tri.vertices[2];
+		double[] d2 = new double[3];
 		int wfSide = tri.indexOfNeighbour(null);
 		KineticVertex ow = (KineticVertex)tri.vertices[ccw(wfSide)], dw = (KineticVertex)tri.vertices[cw(wfSide)], aw = (KineticVertex)tri.vertices[wfSide];
 
@@ -247,10 +255,10 @@ public class CollapseEventComputer {
 
 		// if apex hits wavefront edge "now", classify immediately (edge / split / flip).
 		if (!Double.isNaN(tc) && nearZero(Math.abs(tc - now))) {
-			double[] d2Now = sideD2(o, d, a, now);
+			sideD2(o, d, a, now, d2);
 			List<Integer> zeroLenSides = new ArrayList<>();
 			for (int i = 0; i < 3; i++) {
-				if (nearZero(Math.sqrt(d2Now[i]))) {
+				if (nearZero(Math.sqrt(d2[i]))) {
 					zeroLenSides.add(i);
 				}
 			}
@@ -258,7 +266,7 @@ public class CollapseEventComputer {
 				return edgeEvt(tri, now, List.of(zeroLenSides.get(0)));
 			}
 			// else: choose longest side by length; split if it's the wavefront side, else flip.
-			double l0 = Math.sqrt(d2Now[0]), l1 = Math.sqrt(d2Now[1]), l2 = Math.sqrt(d2Now[2]);
+			double l0 = Math.sqrt(d2[0]), l1 = Math.sqrt(d2[1]), l2 = Math.sqrt(d2[2]);
 			int longest = (l0 > l1) ? (l0 > l2 ? 0 : 2) : (l1 > l2 ? 1 : 2);
 			return (longest == wfSide) ? splitEvt(tri, now, longest) : flipEvt(tri, now, longest);
 		}
@@ -272,7 +280,7 @@ public class CollapseEventComputer {
 			if (nearZero(ta - now)) {
 				return splitEvt(tri, now, wfSide);
 			}
-			double[] d2 = sideD2(o, d, a, ta);
+			sideD2(o, d, a, ta, d2);
 			for (int i=0; i<3; i++) {
 				if (tri.neighbours[i] == null) {
 					d2[i] = -1.0;
@@ -282,7 +290,7 @@ public class CollapseEventComputer {
 		}
 		if (Double.isNaN(te) && !Double.isNaN(tc)) {
 			double t = (!Double.isNaN(ta) && ta < tc) ? ta : tc;
-			double[] d2 = sideD2(o, d, a, t);
+			sideD2(o, d, a, t, d2);
 			double mx = Math.max(d2[0], Math.max(d2[1], d2[2]));
 			List<Integer> longs = new ArrayList<>();
 			for (int i=0; i<3; i++) {
@@ -306,10 +314,10 @@ public class CollapseEventComputer {
 			return edgeEvt(tri, te, List.of(wfSide));
 		}
 		if (te <= tc) {
-			double[] d2 = sideD2(o, d, a, te);
+			sideD2(o, d, a, te, d2);
 			return edgeEvt(tri, te, List.of(d2[0] < d2[1] ? (d2[0] < d2[2] ? 0 : 2) : (d2[1] < d2[2] ? 1 : 2)));
 		}
-		double[] d2 = sideD2(o, d, a, tc);
+		sideD2(o, d, a, tc, d2);
 		int zCt = 0, zIdx = -1;
 		for (int i=0; i<3; i++) {
 			if (nearZero(Math.sqrt(d2[i]))) { zCt++; zIdx = i; }
@@ -326,6 +334,7 @@ public class CollapseEventComputer {
 
 	private static Event finite2(KineticTriangle tri, double now, boolean strictGt) {
 		KineticVertex o = (KineticVertex)tri.vertices[0], d = (KineticVertex)tri.vertices[1], a = (KineticVertex)tri.vertices[2];
+		double[] l = new double[3];
 		double[] tms = new double[] { Double.NaN, Double.NaN, Double.NaN };
 		for (int i=0; i<3; i++) {
 			if (tri.neighbours[i] == null) {
@@ -339,7 +348,7 @@ public class CollapseEventComputer {
 		if (Double.isNaN(t)) {
 			return null;
 		}
-		double[] l = sideD2(o, d, a, t);
+		sideD2(o, d, a, t, l);
 		for(int i=0; i<3; i++) {
 			l[i] = Math.sqrt(l[i]);
 		}
@@ -396,7 +405,8 @@ public class CollapseEventComputer {
 
 	public static Event computeNewEdgeCollapse(KineticTriangle tri, double time) {
 		KineticVertex o = (KineticVertex)tri.vertices[0], d = (KineticVertex)tri.vertices[1], a = (KineticVertex)tri.vertices[2];
-		double[] l = sideD2(o, d, a, time);
+		double[] l = new double[3];
+		sideD2(o, d, a, time, l);
 		for(int i=0; i<3; i++) {
 			l[i] = Math.sqrt(l[i]);
 		}
