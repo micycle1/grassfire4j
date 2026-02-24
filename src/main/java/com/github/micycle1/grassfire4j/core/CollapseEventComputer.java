@@ -20,6 +20,9 @@ import com.github.micycle1.grassfire4j.model.Model.KineticVertex;
 import com.github.micycle1.grassfire4j.model.Model.VertexRef;
 import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 
+/**
+ * Computes candidate collapse/flip/split events for kinetic triangles.
+ */
 public class CollapseEventComputer {
 
 	public static Double findGt(List<Double> a, double x) {

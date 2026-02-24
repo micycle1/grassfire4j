@@ -19,10 +19,17 @@ import com.github.micycle1.grassfire4j.model.Model.KineticTriangle;
 import com.github.micycle1.grassfire4j.model.Model.KineticVertex;
 import com.github.micycle1.grassfire4j.model.Model.Skeleton;
 import com.github.micycle1.grassfire4j.model.Model.SkeletonNode;
-import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputMesh;
-import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputTriangle;
-import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputVertex;
+import com.github.micycle1.grassfire4j.input.InputMesh;
+import com.github.micycle1.grassfire4j.input.InputMesh.InputTriangle;
+import com.github.micycle1.grassfire4j.input.InputMesh.InputVertex;
 
+/**
+ * Core initialisation routines that convert an {@link InputMesh} into the
+ * kinetic model used by the event-driven straight-skeleton solver.
+ * <p>
+ * Since this layer depends only on {@link InputMesh}, it is decoupled from
+ * any particular frontend adapter.
+ */
 public final class Core {
 
 	public static int ccw(int i) { return (i + 1) % 3; }

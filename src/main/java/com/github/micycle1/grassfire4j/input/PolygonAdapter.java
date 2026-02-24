@@ -1,4 +1,4 @@
-package com.github.micycle1.grassfire4j.triangulation;
+package com.github.micycle1.grassfire4j.input;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -21,37 +21,18 @@ import org.tinfour.utils.HilbertSort;
 import org.tinfour.utils.TriangleCollector;
 
 import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
+import com.github.micycle1.grassfire4j.input.InputMesh.Constraint;
+import com.github.micycle1.grassfire4j.input.InputMesh.InputTriangle;
+import com.github.micycle1.grassfire4j.input.InputMesh.InputVertex;
 
-public class JtsAdapter {
-
-	public record Constraint(double weight) {}
-
-	public static class InputVertex {
-		public final double x, y;
-		public final boolean isFinite;
-		public final Integer info;
-		public InputVertex(double x, double y, boolean isFinite, Integer info) {
-			this.x = x; this.y = y; this.isFinite = isFinite; this.info = info;
-		}
-	}
-
-	public static class InputTriangle {
-		public final int[] v;
-		public final int[] n;
-		public final Constraint[] c;
-		public final boolean isInternal;
-		public InputTriangle(int[] v, int[] n, Constraint[] c, boolean isInternal) {
-			this.v = v; this.n = n; this.c = c; this.isInternal = isInternal;
-		}
-	}
-
-	public static class InputMesh {
-		public final List<InputVertex> vertices;
-		public final List<InputTriangle> triangles;
-		public InputMesh(List<InputVertex> vertices, List<InputTriangle> triangles) {
-			this.vertices = vertices; this.triangles = triangles;
-		}
-	}
+/**
+ * Adapter that converts JTS {@link Polygon} input into {@link InputMesh}.
+ * <p>
+ * This is one concrete adapter for the solver boundary; additional adapters
+ * for other input formats can be introduced by producing the same
+ * {@link InputMesh} representation.
+ */
+public class PolygonAdapter {
 
 	private record Edge(Vec2 a, Vec2 b) {
 		Edge(Vec2 a, Vec2 b) {

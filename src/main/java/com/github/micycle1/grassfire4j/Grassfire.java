@@ -5,22 +5,45 @@ import org.locationtech.jts.geom.Polygon;
 import com.github.micycle1.grassfire4j.core.CollapseEventComputer;
 import com.github.micycle1.grassfire4j.core.Core;
 import com.github.micycle1.grassfire4j.events.Events;
+import com.github.micycle1.grassfire4j.input.InputMesh;
+import com.github.micycle1.grassfire4j.input.PolygonAdapter;
 import com.github.micycle1.grassfire4j.model.Model.Skeleton;
-import com.github.micycle1.grassfire4j.triangulation.JtsAdapter;
-import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputMesh;
 
+/**
+ * Public API for computing a kinetic straight skeleton (wavefront-collapse /
+ * grassfire).
+ * <p>
+ * The API is intentionally split into adapters and solver core: adapters map
+ * external geometry formats into {@link InputMesh}, and the skeleton solver
+ * then consumes that intermediate representation.
+ * <p>
+ * This design allows additional adapters to be added without changing the
+ * kinetic skeleton pipeline.
+ */
 public class Grassfire {
 
+	/**
+	 * Computes the kinetic straight skeleton of a JTS polygon.
+	 * <p>
+	 * Supports polygons with holes via the provided JTS {@link Polygon}.
+	 *
+	 * @param polygon polygon input (outer shell and optional interior rings)
+	 * @return skeleton model containing nodes, kinetic vertices, and segments
+	 */
 	public static Skeleton computeSkeleton(Polygon polygon) {
-		var mesh = JtsAdapter.fromPolygon(polygon);
+		var mesh = PolygonAdapter.fromPolygon(polygon);
 		return computeSkeleton(mesh);
 	}
 
-	public static Skeleton computeSkeletonTinfour(Polygon polygon) {
-		var mesh = JtsAdapter.fromPolygon(polygon);
-		return computeSkeleton(mesh);
-	}
-
+	/**
+	 * Computes the kinetic straight skeleton from a pre-built input mesh.
+	 * <p>
+	 * Use this overload when you need control over triangulation and per-edge
+	 * weights before running the event-based solver.
+	 *
+	 * @param mesh triangulation-ready input mesh for the kinetic solver
+	 * @return skeleton model containing nodes, kinetic vertices, and segments
+	 */
 	public static Skeleton computeSkeleton(InputMesh mesh) {
 		Skeleton skel = Core.initSkeleton(mesh);
 

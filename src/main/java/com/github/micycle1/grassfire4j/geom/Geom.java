@@ -4,6 +4,12 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+/**
+ * Geometric primitives and utility operations used by the kinetic solver.
+ * <p>
+ * Shared maths lives here so adapter code and solver code can rely on a common,
+ * minimal geometry layer.
+ */
 public final class Geom {
 
 	public static record Vec2(double x, double y) {}

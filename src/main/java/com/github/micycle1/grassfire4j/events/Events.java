@@ -34,7 +34,13 @@ import com.github.micycle1.grassfire4j.model.Model.SkeletonNode;
 import com.github.micycle1.grassfire4j.model.Model.VertexRef;
 import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 
+/**
+ * Event queue and handlers for advancing the kinetic straight-skeleton
+ * simulation.
+ */
 public class Events {
+	
+	private static final int LOOP_MAX = 50_000;
 
 	public static class EventQueue {
 		private final PriorityQueue<Event> heap = new PriorityQueue<>();
@@ -602,8 +608,8 @@ public class Events {
 		int guard = 0;
 
 		while (!q.isEmpty() || !imm.isEmpty()) {
-			if (guard++ > 50_000) {
-				throw new RuntimeException("Loop > 50,000");
+			if (guard++ > LOOP_MAX) {
+				throw new RuntimeException("Exceeded maximum event loop iterations (" + LOOP_MAX + ") (probably degenerate input in some way that is unhandled)");
 			}
 			step++;
 			Event evt = imm.isEmpty() ? q.pop() : imm.pollFirst();

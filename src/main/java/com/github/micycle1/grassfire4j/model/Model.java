@@ -10,6 +10,12 @@ import com.github.micycle1.grassfire4j.geom.Geom.Line2;
 import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
 
+/**
+ * Domain model types for the kinetic straight-skeleton computation.
+ * <p>
+ * These types represent solver state after input has been normalised into
+ * {@code InputMesh}, independent of any specific adapter implementation.
+ */
 public final class Model {
 
 	public static class SkeletonNode {
