@@ -1,12 +1,13 @@
 package grassfire2;
 
-import grassfire2.core.*;
+import org.locationtech.jts.geom.Polygon;
+
+import grassfire2.core.CollapseEventComputer;
+import grassfire2.core.Core;
 import grassfire2.events.Events;
 import grassfire2.model.Model.Skeleton;
 import grassfire2.triangulation.JtsAdapter;
 import grassfire2.triangulation.JtsAdapter.InputMesh;
-
-import org.locationtech.jts.geom.Polygon;
 
 public class GrassfireApi {
 
@@ -30,8 +31,9 @@ public class GrassfireApi {
 		Events.EventQueue queue = new Events.EventQueue();
 		for (var tri : skel.triangles) {
 			var e = CollapseEventComputer.compute(tri, 0.0, true);
-			if (e != null)
+			if (e != null) {
 				queue.add(e);
+			}
 		}
 
 		// 4. Run Physics Loop

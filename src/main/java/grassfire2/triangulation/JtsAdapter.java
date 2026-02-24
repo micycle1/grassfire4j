@@ -26,200 +26,216 @@ import grassfire2.geom.Geom.Vec2;
 
 public class JtsAdapter {
 
-    public record Constraint(double weight) {}
+	public record Constraint(double weight) {}
 
-    public static class InputVertex {
-        public final double x, y;
-        public final boolean isFinite;
-        public final Integer info;
-        public InputVertex(double x, double y, boolean isFinite, Integer info) {
-            this.x = x; this.y = y; this.isFinite = isFinite; this.info = info;
-        }
-    }
+	public static class InputVertex {
+		public final double x, y;
+		public final boolean isFinite;
+		public final Integer info;
+		public InputVertex(double x, double y, boolean isFinite, Integer info) {
+			this.x = x; this.y = y; this.isFinite = isFinite; this.info = info;
+		}
+	}
 
-    public static class InputTriangle {
-        public final int[] v;
-        public final int[] n;
-        public final Constraint[] c;
-        public final boolean isInternal;
-        public InputTriangle(int[] v, int[] n, Constraint[] c, boolean isInternal) {
-            this.v = v; this.n = n; this.c = c; this.isInternal = isInternal;
-        }
-    }
+	public static class InputTriangle {
+		public final int[] v;
+		public final int[] n;
+		public final Constraint[] c;
+		public final boolean isInternal;
+		public InputTriangle(int[] v, int[] n, Constraint[] c, boolean isInternal) {
+			this.v = v; this.n = n; this.c = c; this.isInternal = isInternal;
+		}
+	}
 
-    public static class InputMesh {
-        public final List<InputVertex> vertices;
-        public final List<InputTriangle> triangles;
-        public InputMesh(List<InputVertex> vertices, List<InputTriangle> triangles) {
-            this.vertices = vertices; this.triangles = triangles;
-        }
-    }
+	public static class InputMesh {
+		public final List<InputVertex> vertices;
+		public final List<InputTriangle> triangles;
+		public InputMesh(List<InputVertex> vertices, List<InputTriangle> triangles) {
+			this.vertices = vertices; this.triangles = triangles;
+		}
+	}
 
-    private record Edge(Vec2 a, Vec2 b) {
-        Edge(Vec2 a, Vec2 b) {
-            if (a.x() < b.x() || (a.x() == b.x() && a.y() < b.y())) { this.a = a; this.b = b; }
-            else { this.a = b; this.b = a; }
-        }
-    }
+	private record Edge(Vec2 a, Vec2 b) {
+		Edge(Vec2 a, Vec2 b) {
+			if (a.x() < b.x() || (a.x() == b.x() && a.y() < b.y())) { this.a = a; this.b = b; }
+			else { this.a = b; this.b = a; }
+		}
+	}
 
-    public static InputMesh fromJtsPolygon(Polygon polygon) {
-        Geometry triGeom = ConstrainedDelaunayTriangulator.triangulate(polygon);
-        if (triGeom.isEmpty()) return new InputMesh(List.of(), List.of());
+	public static InputMesh fromJtsPolygon(Polygon polygon) {
+		Geometry triGeom = ConstrainedDelaunayTriangulator.triangulate(polygon);
+		if (triGeom.isEmpty()) {
+			return new InputMesh(List.of(), List.of());
+		}
 
-        Set<Edge> constrainedEdges = getConstrainedEdges(polygon);
+		Set<Edge> constrainedEdges = getConstrainedEdges(polygon);
 
-        Map<Vec2, Integer> vIndex = new HashMap<>();
-        List<InputVertex> vertices = new ArrayList<>();
-        List<int[]> triVertices = new ArrayList<>();
+		Map<Vec2, Integer> vIndex = new HashMap<>();
+		List<InputVertex> vertices = new ArrayList<>();
+		List<int[]> triVertices = new ArrayList<>();
 
-        for (int i = 0; i < triGeom.getNumGeometries(); i++) {
-            Polygon poly = (Polygon) triGeom.getGeometryN(i);
-            Coordinate[] coords = poly.getExteriorRing().getCoordinates();
-            Vec2[] triPts = { new Vec2(coords[0].x, coords[0].y), new Vec2(coords[2].x, coords[2].y), new Vec2(coords[1].x, coords[1].y) };
-            
-            int[] vIdx = new int[3];
-            for (int j = 0; j < 3; j++) {
-                vIdx[j] = vIndex.computeIfAbsent(triPts[j], pt -> {
-                    vertices.add(new InputVertex(pt.x(), pt.y(), true, null));
-                    return vertices.size() - 1;
-                });
-            }
-            triVertices.add(vIdx);
-        }
+		for (int i = 0; i < triGeom.getNumGeometries(); i++) {
+			Polygon poly = (Polygon) triGeom.getGeometryN(i);
+			Coordinate[] coords = poly.getExteriorRing().getCoordinates();
+			Vec2[] triPts = { new Vec2(coords[0].x, coords[0].y), new Vec2(coords[2].x, coords[2].y), new Vec2(coords[1].x, coords[1].y) };
 
-        return buildInputMesh(vertices, triVertices, constrainedEdges);
-    }
+			int[] vIdx = new int[3];
+			for (int j = 0; j < 3; j++) {
+				vIdx[j] = vIndex.computeIfAbsent(triPts[j], pt -> {
+					vertices.add(new InputVertex(pt.x(), pt.y(), true, null));
+					return vertices.size() - 1;
+				});
+			}
+			triVertices.add(vIdx);
+		}
 
-    public static InputMesh fromJtsPolygonTinfour(Polygon polygon) {
-        if (polygon.isEmpty()) return new InputMesh(List.of(), List.of());
+		return buildInputMesh(vertices, triVertices, constrainedEdges);
+	}
 
-        Set<Edge> constrainedEdges = getConstrainedEdges(polygon);
+	public static InputMesh fromJtsPolygonTinfour(Polygon polygon) {
+		if (polygon.isEmpty()) {
+			return new InputMesh(List.of(), List.of());
+		}
 
-        IncrementalTin tin = new IncrementalTin(1.0);
-        List<Vertex> seedVertices = new ArrayList<>();
-        Set<Vec2> uniqueVertices = new HashSet<>();
-        addRingVertices(polygon.getExteriorRing(), seedVertices, uniqueVertices);
-        for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-            addRingVertices(polygon.getInteriorRingN(i), seedVertices, uniqueVertices);
-        }
+		Set<Edge> constrainedEdges = getConstrainedEdges(polygon);
 
-        if (seedVertices.size() < 3) return new InputMesh(List.of(), List.of());
+		IncrementalTin tin = new IncrementalTin(1.0);
+		List<Vertex> seedVertices = new ArrayList<>();
+		Set<Vec2> uniqueVertices = new HashSet<>();
+		addRingVertices(polygon.getExteriorRing(), seedVertices, uniqueVertices);
+		for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+			addRingVertices(polygon.getInteriorRingN(i), seedVertices, uniqueVertices);
+		}
 
-        HilbertSort hilbertSort = new HilbertSort();
-        hilbertSort.sort(seedVertices);
-        tin.add(seedVertices, null);
+		if (seedVertices.size() < 3) {
+			return new InputMesh(List.of(), List.of());
+		}
 
-        List<IConstraint> constraints = new ArrayList<>();
-        PolygonConstraint exterior = createPolygonConstraint(polygon.getExteriorRing(), true);
-        if (exterior != null) constraints.add(exterior);
-        for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-            PolygonConstraint hole = createPolygonConstraint(polygon.getInteriorRingN(i), false);
-            if (hole != null) constraints.add(hole);
-        }
-        if (!constraints.isEmpty()) {
-            tin.addConstraints(constraints, false);
-        }
+		HilbertSort hilbertSort = new HilbertSort();
+		hilbertSort.sort(seedVertices);
+		tin.add(seedVertices, null);
 
-        Map<Vec2, Integer> vIndex = new HashMap<>();
-        List<InputVertex> vertices = new ArrayList<>();
-        List<int[]> triVertices = new ArrayList<>();
+		List<IConstraint> constraints = new ArrayList<>();
+		PolygonConstraint exterior = createPolygonConstraint(polygon.getExteriorRing(), true);
+		if (exterior != null) {
+			constraints.add(exterior);
+		}
+		for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+			PolygonConstraint hole = createPolygonConstraint(polygon.getInteriorRingN(i), false);
+			if (hole != null) {
+				constraints.add(hole);
+			}
+		}
+		if (!constraints.isEmpty()) {
+			tin.addConstraints(constraints, false);
+		}
 
-        TriangleCollector.visitTrianglesConstrained(tin, tri -> {
-            int[] vIdx = new int[3];
-            for (int i = 0; i < 3; i++) {
-                Vec2 p = new Vec2(tri[i].getX(), tri[i].getY());
-                vIdx[i] = vIndex.computeIfAbsent(p, pt -> {
-                    vertices.add(new InputVertex(pt.x(), pt.y(), true, null));
-                    return vertices.size() - 1;
-                });
-            }
-            triVertices.add(vIdx);
-        });
+		Map<Vec2, Integer> vIndex = new HashMap<>();
+		List<InputVertex> vertices = new ArrayList<>();
+		List<int[]> triVertices = new ArrayList<>();
 
-        return buildInputMesh(vertices, triVertices, constrainedEdges);
-    }
+		TriangleCollector.visitTrianglesConstrained(tin, tri -> {
+			int[] vIdx = new int[3];
+			for (int i = 0; i < 3; i++) {
+				Vec2 p = new Vec2(tri[i].getX(), tri[i].getY());
+				vIdx[i] = vIndex.computeIfAbsent(p, pt -> {
+					vertices.add(new InputVertex(pt.x(), pt.y(), true, null));
+					return vertices.size() - 1;
+				});
+			}
+			triVertices.add(vIdx);
+		});
 
-    private static InputMesh buildInputMesh(List<InputVertex> vertices, List<int[]> triVertices, Set<Edge> constrainedEdges) {
-        record SideRef(int tIdx, int side) {}
-        Map<Edge, List<SideRef>> edgeToSides = new HashMap<>();
-        for (int tIdx = 0; tIdx < triVertices.size(); tIdx++) {
-            int[] tv = triVertices.get(tIdx);
-            for (int side = 0; side < 3; side++) {
-                InputVertex a = vertices.get(tv[(side + 1) % 3]);
-                InputVertex b = vertices.get(tv[(side + 2) % 3]); // side-1 mapped to side+2
-                edgeToSides.computeIfAbsent(new Edge(new Vec2(a.x, a.y), new Vec2(b.x, b.y)), k -> new ArrayList<>()).add(new SideRef(tIdx, side));
-            }
-        }
+		return buildInputMesh(vertices, triVertices, constrainedEdges);
+	}
 
-        List<InputTriangle> triangles = new ArrayList<>();
-        int[][] triN = new int[triVertices.size()][3];
-        for (var row : triN) Arrays.fill(row, -1);
+	private static InputMesh buildInputMesh(List<InputVertex> vertices, List<int[]> triVertices, Set<Edge> constrainedEdges) {
+		record SideRef(int tIdx, int side) {}
+		Map<Edge, List<SideRef>> edgeToSides = new HashMap<>();
+		for (int tIdx = 0; tIdx < triVertices.size(); tIdx++) {
+			int[] tv = triVertices.get(tIdx);
+			for (int side = 0; side < 3; side++) {
+				InputVertex a = vertices.get(tv[(side + 1) % 3]);
+				InputVertex b = vertices.get(tv[(side + 2) % 3]); // side-1 mapped to side+2
+				edgeToSides.computeIfAbsent(new Edge(new Vec2(a.x, a.y), new Vec2(b.x, b.y)), k -> new ArrayList<>()).add(new SideRef(tIdx, side));
+			}
+		}
 
-        for (var sides : edgeToSides.values()) {
-            if (sides.size() == 2) {
-                SideRef s0 = sides.get(0), s1 = sides.get(1);
-                triN[s0.tIdx][s0.side] = s1.tIdx;
-                triN[s1.tIdx][s1.side] = s0.tIdx;
-            }
-        }
+		List<InputTriangle> triangles = new ArrayList<>();
+		int[][] triN = new int[triVertices.size()][3];
+		for (var row : triN) {
+			Arrays.fill(row, -1);
+		}
 
-        for (int tIdx = 0; tIdx < triVertices.size(); tIdx++) {
-            int[] tv = triVertices.get(tIdx);
-            Constraint[] tc = new Constraint[3];
-            for (int side = 0; side < 3; side++) {
-                InputVertex a = vertices.get(tv[(side + 1) % 3]);
-                InputVertex b = vertices.get(tv[(side + 2) % 3]);
-                if (constrainedEdges.contains(new Edge(new Vec2(a.x, a.y), new Vec2(b.x, b.y)))) {
-                    tc[side] = new Constraint(1.0);
-                }
-            }
-            triangles.add(new InputTriangle(tv, triN[tIdx], tc, true));
-        }
+		for (var sides : edgeToSides.values()) {
+			if (sides.size() == 2) {
+				SideRef s0 = sides.get(0), s1 = sides.get(1);
+				triN[s0.tIdx][s0.side] = s1.tIdx;
+				triN[s1.tIdx][s1.side] = s0.tIdx;
+			}
+		}
 
-        return new InputMesh(vertices, triangles);
-    }
+		for (int tIdx = 0; tIdx < triVertices.size(); tIdx++) {
+			int[] tv = triVertices.get(tIdx);
+			Constraint[] tc = new Constraint[3];
+			for (int side = 0; side < 3; side++) {
+				InputVertex a = vertices.get(tv[(side + 1) % 3]);
+				InputVertex b = vertices.get(tv[(side + 2) % 3]);
+				if (constrainedEdges.contains(new Edge(new Vec2(a.x, a.y), new Vec2(b.x, b.y)))) {
+					tc[side] = new Constraint(1.0);
+				}
+			}
+			triangles.add(new InputTriangle(tv, triN[tIdx], tc, true));
+		}
 
-    private static Set<Edge> getConstrainedEdges(Polygon polygon) {
-        Set<Edge> constrainedEdges = new HashSet<>();
-        addRingEdges(polygon.getExteriorRing(), constrainedEdges);
-        for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-            addRingEdges(polygon.getInteriorRingN(i), constrainedEdges);
-        }
-        return constrainedEdges;
-    }
+		return new InputMesh(vertices, triangles);
+	}
 
-    private static void addRingVertices(LineString ring, List<Vertex> out, Set<Vec2> seen) {
-        Coordinate[] coords = ring.getCoordinates();
-        for (int i = 0; i < coords.length - 1; i++) {
-            Vec2 point = new Vec2(coords[i].x, coords[i].y);
-            if (seen.add(point)) {
-                out.add(new Vertex(point.x(), point.y(), Double.NaN));
-            }
-        }
-    }
+	private static Set<Edge> getConstrainedEdges(Polygon polygon) {
+		Set<Edge> constrainedEdges = new HashSet<>();
+		addRingEdges(polygon.getExteriorRing(), constrainedEdges);
+		for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+			addRingEdges(polygon.getInteriorRingN(i), constrainedEdges);
+		}
+		return constrainedEdges;
+	}
 
-    private static PolygonConstraint createPolygonConstraint(LineString ring, boolean exterior) {
-        Coordinate[] coords = ring.getCoordinates();
-        if (coords.length < 4) return null;
+	private static void addRingVertices(LineString ring, List<Vertex> out, Set<Vec2> seen) {
+		Coordinate[] coords = ring.getCoordinates();
+		for (int i = 0; i < coords.length - 1; i++) {
+			Vec2 point = new Vec2(coords[i].x, coords[i].y);
+			if (seen.add(point)) {
+				out.add(new Vertex(point.x(), point.y(), Double.NaN));
+			}
+		}
+	}
 
-        List<Vertex> points = new ArrayList<>(coords.length - 1);
-        for (int i = 0; i < coords.length - 1; i++) {
-            points.add(new Vertex(coords[i].x, coords[i].y, Double.NaN));
-        }
-        if (points.size() < 3) return null;
+	private static PolygonConstraint createPolygonConstraint(LineString ring, boolean exterior) {
+		Coordinate[] coords = ring.getCoordinates();
+		if (coords.length < 4) {
+			return null;
+		}
 
-        boolean ccw = Orientation.isCCW(coords);
-        if ((exterior && !ccw) || (!exterior && ccw)) {
-            Collections.reverse(points);
-        }
+		List<Vertex> points = new ArrayList<>(coords.length - 1);
+		for (int i = 0; i < coords.length - 1; i++) {
+			points.add(new Vertex(coords[i].x, coords[i].y, Double.NaN));
+		}
+		if (points.size() < 3) {
+			return null;
+		}
 
-        return new PolygonConstraint(points);
-    }
+		boolean ccw = Orientation.isCCW(coords);
+		if ((exterior && !ccw) || (!exterior && ccw)) {
+			Collections.reverse(points);
+		}
 
-    private static void addRingEdges(LineString ring, Set<Edge> edges) {
-        Coordinate[] coords = ring.getCoordinates();
-        for (int i = 0; i < coords.length - 1; i++) {
-            edges.add(new Edge(new Vec2(coords[i].x, coords[i].y), new Vec2(coords[i+1].x, coords[i+1].y)));
-        }
-    }
+		return new PolygonConstraint(points);
+	}
+
+	private static void addRingEdges(LineString ring, Set<Edge> edges) {
+		Coordinate[] coords = ring.getCoordinates();
+		for (int i = 0; i < coords.length - 1; i++) {
+			edges.add(new Edge(new Vec2(coords[i].x, coords[i].y), new Vec2(coords[i+1].x, coords[i+1].y)));
+		}
+	}
 }
