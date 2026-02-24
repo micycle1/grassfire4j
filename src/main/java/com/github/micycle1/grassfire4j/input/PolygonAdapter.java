@@ -1,10 +1,10 @@
 package com.github.micycle1.grassfire4j.input;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -21,9 +21,8 @@ import org.tinfour.utils.HilbertSort;
 import org.tinfour.utils.TriangleCollector;
 
 import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
-import com.github.micycle1.grassfire4j.input.InputMesh.Constraint;
-import com.github.micycle1.grassfire4j.input.InputMesh.InputTriangle;
 import com.github.micycle1.grassfire4j.input.InputMesh.InputVertex;
+import com.github.micycle1.grassfire4j.input.InputMeshBuilder.EdgeRef;
 
 /**
  * Adapter that converts JTS {@link Polygon} input into {@link InputMesh}.
@@ -32,23 +31,54 @@ import com.github.micycle1.grassfire4j.input.InputMesh.InputVertex;
  * for other input formats can be introduced by producing the same
  * {@link InputMesh} representation.
  */
-public class PolygonAdapter {
+public class PolygonAdapter implements Adapter<Polygon> {
 
 	private record Edge(Vec2 a, Vec2 b) {
 		Edge(Vec2 a, Vec2 b) {
-			if (a.x() < b.x() || (a.x() == b.x() && a.y() < b.y())) { this.a = a; this.b = b; }
-			else { this.a = b; this.b = a; }
+			if (a.x() < b.x() || (a.x() == b.x() && a.y() < b.y())) {
+				this.a = a;
+				this.b = b;
+			} else {
+				this.a = b;
+				this.b = a;
+			}
 		}
 	}
 
-	public static InputMesh fromPolygon(Polygon polygon) {
+	@Override
+	public InputMesh toMesh(Polygon polygon) {
+		return toMesh(polygon, null);
+	}
+
+	/**
+	 * Converts a polygon into {@link InputMesh} while assigning per-boundary-edge
+	 * weights.
+	 * <p>
+	 * Edge weights are consumed in boundary traversal order: exterior ring first,
+	 * then interior rings in index order ({@code polygon.getInteriorRingN(i)}).
+	 * Within each ring, each segment between consecutive coordinates contributes
+	 * one weight entry (the closing duplicate coordinate is excluded).
+	 *
+	 * @param polygon input polygon
+	 * @param edgeWeights optional per-edge weights; when non-null, size must equal
+	 *        total boundary edge count across shell and holes
+	 * @return triangulated solver input mesh
+	 */
+	public InputMesh toMesh(Polygon polygon, List<Double> edgeWeights) {
 		if (polygon.isEmpty()) {
 			return new InputMesh(List.of(), List.of());
 		}
 
-		Set<Edge> constrainedEdges = getConstrainedEdges(polygon);
+		List<Edge> boundaryEdges = getBoundaryEdgesInOrder(polygon);
+		if (edgeWeights != null && edgeWeights.size() != boundaryEdges.size()) {
+			throw new IllegalArgumentException(
+					"edgeWeights size (" + edgeWeights.size() + ") must equal boundary edge count (" + boundaryEdges.size() + ")");
+		}
 
-		IncrementalTin tin = new IncrementalTin(1.0);
+		final var coords = polygon.getCoordinates();
+		final double estPointSpacing = coords[0].distance(coords[1]);
+		IncrementalTin tin = new IncrementalTin(estPointSpacing);
+
 		List<Vertex> seedVertices = new ArrayList<>();
 		Set<Vec2> uniqueVertices = new HashSet<>();
 		addRingVertices(polygon.getExteriorRing(), seedVertices, uniqueVertices);
@@ -95,58 +125,39 @@ public class PolygonAdapter {
 			triVertices.add(vIdx);
 		});
 
-		return buildInputMesh(vertices, triVertices, constrainedEdges);
-	}
-
-	private static InputMesh buildInputMesh(List<InputVertex> vertices, List<int[]> triVertices, Set<Edge> constrainedEdges) {
-		record SideRef(int tIdx, int side) {}
-		Map<Edge, List<SideRef>> edgeToSides = new HashMap<>();
-		for (int tIdx = 0; tIdx < triVertices.size(); tIdx++) {
-			int[] tv = triVertices.get(tIdx);
-			for (int side = 0; side < 3; side++) {
-				InputVertex a = vertices.get(tv[(side + 1) % 3]);
-				InputVertex b = vertices.get(tv[(side + 2) % 3]); // side-1 mapped to side+2
-				edgeToSides.computeIfAbsent(new Edge(new Vec2(a.x, a.y), new Vec2(b.x, b.y)), k -> new ArrayList<>()).add(new SideRef(tIdx, side));
-			}
-		}
-
-		List<InputTriangle> triangles = new ArrayList<>();
-		int[][] triN = new int[triVertices.size()][3];
-		for (var row : triN) {
-			Arrays.fill(row, -1);
-		}
-
-		for (var sides : edgeToSides.values()) {
-			if (sides.size() == 2) {
-				SideRef s0 = sides.get(0), s1 = sides.get(1);
-				triN[s0.tIdx][s0.side] = s1.tIdx;
-				triN[s1.tIdx][s1.side] = s0.tIdx;
-			}
-		}
-
-		for (int tIdx = 0; tIdx < triVertices.size(); tIdx++) {
-			int[] tv = triVertices.get(tIdx);
-			Constraint[] tc = new Constraint[3];
-			for (int side = 0; side < 3; side++) {
-				InputVertex a = vertices.get(tv[(side + 1) % 3]);
-				InputVertex b = vertices.get(tv[(side + 2) % 3]);
-				if (constrainedEdges.contains(new Edge(new Vec2(a.x, a.y), new Vec2(b.x, b.y)))) {
-					tc[side] = new Constraint(1.0);
+		Map<EdgeRef, Double> constrainedIndexEdgeWeights = new LinkedHashMap<>();
+		for (int i = 0; i < boundaryEdges.size(); i++) {
+			Edge edge = boundaryEdges.get(i);
+			Integer a = vIndex.get(edge.a());
+			Integer b = vIndex.get(edge.b());
+			if (a != null && b != null) {
+				EdgeRef edgeRef = new EdgeRef(a, b);
+				double weight = edgeWeights == null ? 1.0 : edgeWeights.get(i);
+				Double existing = constrainedIndexEdgeWeights.putIfAbsent(edgeRef, weight);
+				if (existing != null && Double.compare(existing, weight) != 0) {
+					throw new IllegalArgumentException("Conflicting weights mapped to the same boundary edge");
 				}
 			}
-			triangles.add(new InputTriangle(tv, triN[tIdx], tc, true));
 		}
 
-		return new InputMesh(vertices, triangles);
+		return InputMeshBuilder.build(vertices, triVertices, constrainedIndexEdgeWeights);
 	}
 
-	private static Set<Edge> getConstrainedEdges(Polygon polygon) {
-		Set<Edge> constrainedEdges = new HashSet<>();
-		addRingEdges(polygon.getExteriorRing(), constrainedEdges);
+	public static InputMesh fromPolygon(Polygon polygon) {
+		return new PolygonAdapter().toMesh(polygon);
+	}
+
+	public static InputMesh fromPolygon(Polygon polygon, List<Double> edgeWeights) {
+		return new PolygonAdapter().toMesh(polygon, edgeWeights);
+	}
+
+	private static List<Edge> getBoundaryEdgesInOrder(Polygon polygon) {
+		List<Edge> boundaryEdges = new ArrayList<>();
+		addRingEdges(polygon.getExteriorRing(), boundaryEdges);
 		for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-			addRingEdges(polygon.getInteriorRingN(i), constrainedEdges);
+			addRingEdges(polygon.getInteriorRingN(i), boundaryEdges);
 		}
-		return constrainedEdges;
+		return boundaryEdges;
 	}
 
 	private static void addRingVertices(LineString ring, List<Vertex> out, Set<Vec2> seen) {
@@ -181,7 +192,7 @@ public class PolygonAdapter {
 		return new PolygonConstraint(points);
 	}
 
-	private static void addRingEdges(LineString ring, Set<Edge> edges) {
+	private static void addRingEdges(LineString ring, List<Edge> edges) {
 		Coordinate[] coords = ring.getCoordinates();
 		for (int i = 0; i < coords.length - 1; i++) {
 			edges.add(new Edge(new Vec2(coords[i].x, coords[i].y), new Vec2(coords[i+1].x, coords[i+1].y)));

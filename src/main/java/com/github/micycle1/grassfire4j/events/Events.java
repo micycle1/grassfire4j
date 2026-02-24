@@ -27,19 +27,19 @@ import com.github.micycle1.grassfire4j.geom.Geom.Line2;
 import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
 import com.github.micycle1.grassfire4j.model.Model.Event;
+import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 import com.github.micycle1.grassfire4j.model.Model.KineticTriangle;
 import com.github.micycle1.grassfire4j.model.Model.KineticVertex;
 import com.github.micycle1.grassfire4j.model.Model.Skeleton;
 import com.github.micycle1.grassfire4j.model.Model.SkeletonNode;
 import com.github.micycle1.grassfire4j.model.Model.VertexRef;
-import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 
 /**
  * Event queue and handlers for advancing the kinetic straight-skeleton
  * simulation.
  */
 public class Events {
-	
+
 	private static final int LOOP_MAX = 50_000;
 
 	public static class EventQueue {

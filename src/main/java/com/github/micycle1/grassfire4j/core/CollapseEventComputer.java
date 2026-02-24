@@ -15,10 +15,10 @@ import java.util.List;
 
 import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 import com.github.micycle1.grassfire4j.model.Model.Event;
+import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 import com.github.micycle1.grassfire4j.model.Model.KineticTriangle;
 import com.github.micycle1.grassfire4j.model.Model.KineticVertex;
 import com.github.micycle1.grassfire4j.model.Model.VertexRef;
-import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 
 /**
  * Computes candidate collapse/flip/split events for kinetic triangles.
@@ -112,21 +112,21 @@ public class CollapseEventComputer {
 		}
 
 		int type = tri.getType();
-					Event e = null;
-					if (type == 0) {
-						e = finite0(tri, now, strictGt);
-					} else if (type == 1) {
-						e = finite1(tri, now, strictGt);
-					} else if (type == 2) {
-						e = finite2(tri, now, strictGt);
-					} else if (type == 3) {
-						e = finite3(tri, now, strictGt);
-					}
+		Event e = null;
+		if (type == 0) {
+			e = finite0(tri, now, strictGt);
+		} else if (type == 1) {
+			e = finite1(tri, now, strictGt);
+		} else if (type == 2) {
+			e = finite2(tri, now, strictGt);
+		} else if (type == 3) {
+			e = finite3(tri, now, strictGt);
+		}
 
-					if (e != null) {
-						tri.event = e;
-					}
-					return e;
+		if (e != null) {
+			tri.event = e;
+		}
+		return e;
 	}
 
 	private static double[] sideD2(KineticVertex o, KineticVertex d, KineticVertex a, double t) {

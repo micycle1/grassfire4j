@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.DynamicTest;
 import org.junit.jupiter.api.Test;
@@ -25,9 +26,10 @@ import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.index.strtree.STRtree;
 
+import com.github.micycle1.grassfire4j.input.PolygonAdapter;
 import com.github.micycle1.grassfire4j.model.Model.Skeleton.Segment;
 
-class GrassfireApiTest {
+class GrassfireTest {
 
 	private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 	private static final Path CSV_DIR = Path.of("src", "test", "resources", "csv");
@@ -52,6 +54,25 @@ class GrassfireApiTest {
 	@TestFactory
 	Stream<DynamicTest> skeletonIntegrity() throws IOException {
 		return csvFiles().map(csvFile -> dynamicTest(csvFile.getFileName().toString(), () -> runSkeletonIntegrity(csvFile)));
+	}
+	
+	@Test
+	void weightedPolygonDiffersFromUnweighted() {
+		List<List<Coordinate>> rings = List.of(List.of(
+				c(0.0, 0.0),
+				c(10.0, 0.0),
+				c(10.0, 6.0),
+				c(0.0, 6.0),
+				c(0.0, 0.0)));
+		Polygon polygon = toPolygon(rings);
+
+		var unweighted = Grassfire.computeSkeleton(polygon);
+		var weighted = Grassfire.computeSkeleton(polygon, p -> new PolygonAdapter().toMesh(p, List.of(0.5, 3.0, 1.0, 1.0)));
+
+		Set<String> unweightedSegments = canonicalSegments(unweighted.segments());
+		Set<String> weightedSegments = canonicalSegments(weighted.segments());
+
+		assertFalse(unweightedSegments.equals(weightedSegments), "Weighted and unweighted skeletons should differ");
 	}
 
 	private void runSkeletonIntegrity(Path csvFile) throws IOException {
@@ -202,6 +223,26 @@ class GrassfireApiTest {
 
 	private static Coordinate c(double x, double y) {
 		return new Coordinate(x, y);
+	}
+
+	private static Set<String> canonicalSegments(List<Segment> segments) {
+		return segments.stream()
+				.map(s -> canonicalSegment(s.p1().x(), s.p1().y(), s.p2().x(), s.p2().y()))
+				.collect(Collectors.toSet());
+	}
+
+	private static String canonicalSegment(double x1, double y1, double x2, double y2) {
+		String a = canonicalPoint(x1, y1);
+		String b = canonicalPoint(x2, y2);
+		return (a.compareTo(b) <= 0) ? (a + "|" + b) : (b + "|" + a);
+	}
+
+	private static String canonicalPoint(double x, double y) {
+		return round6(x) + "," + round6(y);
+	}
+
+	private static double round6(double v) {
+		return Math.rint(v * 1_000_000.0) / 1_000_000.0;
 	}
 
 	private static Map<String, Integer> expectedSegments() {

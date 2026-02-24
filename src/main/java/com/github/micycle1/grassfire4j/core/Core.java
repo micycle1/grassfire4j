@@ -14,14 +14,14 @@ import org.locationtech.jts.geom.Coordinate;
 
 import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
+import com.github.micycle1.grassfire4j.input.InputMesh;
+import com.github.micycle1.grassfire4j.input.InputMesh.InputTriangle;
+import com.github.micycle1.grassfire4j.input.InputMesh.InputVertex;
 import com.github.micycle1.grassfire4j.model.Model.InfiniteVertex;
 import com.github.micycle1.grassfire4j.model.Model.KineticTriangle;
 import com.github.micycle1.grassfire4j.model.Model.KineticVertex;
 import com.github.micycle1.grassfire4j.model.Model.Skeleton;
 import com.github.micycle1.grassfire4j.model.Model.SkeletonNode;
-import com.github.micycle1.grassfire4j.input.InputMesh;
-import com.github.micycle1.grassfire4j.input.InputMesh.InputTriangle;
-import com.github.micycle1.grassfire4j.input.InputMesh.InputVertex;
 
 /**
  * Core initialisation routines that convert an {@link InputMesh} into the
@@ -210,7 +210,7 @@ public final class Core {
 				int turn = Orientation.index(new Coordinate(tail.x, tail.y), new Coordinate(mid.x, mid.y), new Coordinate(head.x, head.y));
 				KineticVertex.Turn turnType = turn == -1
 						? KineticVertex.Turn.RIGHT_REFLEX
-						: (turn == 1 ? KineticVertex.Turn.LEFT_CONVEX : KineticVertex.Turn.STRAIGHT);
+								: (turn == 1 ? KineticVertex.Turn.LEFT_CONVEX : KineticVertex.Turn.STRAIGHT);
 
 				WaveFront right = ktriangles.get(first.tIdx()).wavefrontSupportLines[cw(first.side())];
 				WaveFront left = ktriangles.get(last.tIdx()).wavefrontSupportLines[ccw(last.side())];

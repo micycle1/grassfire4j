@@ -13,5 +13,6 @@ This project is the first full kinetic straight‑skeleton implementation availa
 ## Features
 - Kinetic (wavefront‑collapse) straight‑skeleton computed entirely in Java.
 - Accepts JTS `Polygon` inputs; supports polygons with holes.
+- Adapter-based input pipeline (`InputMesh`) makes it easy to plug in user-supplied adapters for other input types.
 - Supports variable edge weights.
 - Produces a Skeleton model with nodes, kinetic vertices and skeleton segments suitable for visualisation or export.

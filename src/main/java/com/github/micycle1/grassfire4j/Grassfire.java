@@ -1,10 +1,13 @@
 package com.github.micycle1.grassfire4j;
 
+import java.util.Objects;
+
 import org.locationtech.jts.geom.Polygon;
 
 import com.github.micycle1.grassfire4j.core.CollapseEventComputer;
 import com.github.micycle1.grassfire4j.core.Core;
 import com.github.micycle1.grassfire4j.events.Events;
+import com.github.micycle1.grassfire4j.input.Adapter;
 import com.github.micycle1.grassfire4j.input.InputMesh;
 import com.github.micycle1.grassfire4j.input.PolygonAdapter;
 import com.github.micycle1.grassfire4j.model.Model.Skeleton;
@@ -31,8 +34,22 @@ public class Grassfire {
 	 * @return skeleton model containing nodes, kinetic vertices, and segments
 	 */
 	public static Skeleton computeSkeleton(Polygon polygon) {
-		var mesh = PolygonAdapter.fromPolygon(polygon);
-		return computeSkeleton(mesh);
+		return computeSkeleton(polygon, new PolygonAdapter());
+	}
+
+	/**
+	 * Computes the kinetic straight skeleton from user-supplied input via an
+	 * adapter.
+	 *
+	 * @param <T> source input type
+	 * @param input source input object
+	 * @param adapter input adapter that converts {@code input} into
+	 *        {@link InputMesh}
+	 * @return skeleton model containing nodes, kinetic vertices, and segments
+	 */
+	public static <T> Skeleton computeSkeleton(T input, Adapter<T> adapter) {
+		Objects.requireNonNull(adapter, "adapter");
+		return computeSkeleton(adapter.toMesh(input));
 	}
 
 	/**
