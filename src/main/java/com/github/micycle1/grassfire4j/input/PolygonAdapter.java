@@ -89,8 +89,8 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		final Map<Vector2D, Integer> boundaryInfoByVertex = boundaryVertexInfoMap;
 
 		final var coords = polygon.getCoordinates();
-		final double estPointSpacing = coords[0].distance(coords[1]);
-		IncrementalTin tin = new IncrementalTin(estPointSpacing);
+		final double estPointSpacing = coords[0].distance(coords[1]) / 10;
+		IncrementalTin tin = new IncrementalTin(Math.max(estPointSpacing, 1e-6));
 
 		List<Vertex> seedVertices = new ArrayList<>();
 		Set<Vector2D> uniqueVertices = new HashSet<>();

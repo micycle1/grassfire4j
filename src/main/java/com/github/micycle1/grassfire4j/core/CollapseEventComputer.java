@@ -6,6 +6,7 @@ import static com.github.micycle1.grassfire4j.geom.Geom.STOP_EPS;
 import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
 import static com.github.micycle1.grassfire4j.geom.Geom.getUniqueTimes;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
+import static com.github.micycle1.grassfire4j.geom.Geom.nearZeroSq;
 
 import java.util.Arrays;
 
@@ -193,8 +194,8 @@ public class CollapseEventComputer {
 
 		double[] eTimes = new double[3];
 		Arrays.fill(eTimes, Double.NaN);
-		for (int i=0; i<3; i++) {
-			VertexRef p = i==0?d:(i==1?a:o), q = i==0?a:(i==1?o:d);
+		for (int i = 0; i < 3; i++) {
+			VertexRef p = i == 0 ? d : (i == 1 ? a : o), q = i == 0 ? a : (i == 1 ? o : d);
 			double t = collapseTimeEdge(p, q, now);
 			if (!Double.isNaN(t) && nearZero(Math.sqrt(p.distance2At(q, t)))) {
 				eTimes[i] = t;
@@ -212,7 +213,7 @@ public class CollapseEventComputer {
 			double m = Math.min(d2[0], Math.min(d2[1], d2[2]));
 			int relMinMask = 0;
 			for (int i=0; i<3; i++) {
-				if (nearZero(d2[i] - m)) {
+				if (nearZeroSq(d2[i] - m)) {
 					relMinMask |= sideMask(i);
 				}
 			}
@@ -236,7 +237,7 @@ public class CollapseEventComputer {
 		sideD2(o, d, a, te, d2);
 		int zerosMask = 0;
 		for (int i=0; i<3; i++) {
-			if (nearZero(d2[i])) {
+			if (nearZeroSq(d2[i])) {
 				zerosMask |= sideMask(i);
 			}
 		}
@@ -261,18 +262,19 @@ public class CollapseEventComputer {
 		// if apex hits wavefront edge "now", classify immediately (edge / split / flip).
 		if (!Double.isNaN(tc) && nearZero(Math.abs(tc - now))) {
 			sideD2(o, d, a, now, d2);
+
 			int zeroLenMask = 0;
 			for (int i = 0; i < 3; i++) {
-				if (nearZero(Math.sqrt(d2[i]))) {
+				if (nearZeroSq(d2[i])) {
 					zeroLenMask |= sideMask(i);
 				}
 			}
 			if (Integer.bitCount(zeroLenMask) == 1) {
 				return edgeEvt(tri, now, zeroLenMask);
 			}
-			// else: choose longest side by length; split if it's the wavefront side, else flip.
-			double l0 = Math.sqrt(d2[0]), l1 = Math.sqrt(d2[1]), l2 = Math.sqrt(d2[2]);
-			int longest = (l0 > l1) ? (l0 > l2 ? 0 : 2) : (l1 > l2 ? 1 : 2);
+
+			int longest = (d2[0] > d2[1]) ? (d2[0] > d2[2] ? 0 : 2) : (d2[1] > d2[2] ? 1 : 2);
+
 			return (longest == wfSide) ? splitEvt(tri, now, longest) : flipEvt(tri, now, longest);
 		}
 		double ta = strictGt ? findGt(areaCollapseTimes(o, d, a, now), now) : findGte(areaCollapseTimes(o, d, a, now), now);

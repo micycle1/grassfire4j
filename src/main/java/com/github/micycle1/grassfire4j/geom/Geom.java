@@ -13,8 +13,9 @@ import org.locationtech.jts.math.Vector2D;
 public final class Geom {
 
 	public static final double STOP_EPS = 1e-9;
-	public static final double TIME_UNIQUE_TOL = 1e-9;
-	public static final double NEAR_ZERO_EPS = 1e-10;
+	private static final double TIME_UNIQUE_TOL = 1e-9;
+	private static final double NEAR_ZERO_EPS = 1e-10;
+	private static final double NEAR_ZERO_EPS_SQ = NEAR_ZERO_EPS * NEAR_ZERO_EPS;
 	public static final double COS_179_999999 = Math.cos(Math.toRadians(179.999999));
 
 	public static double dist2(Vector2D start, Vector2D end) {
@@ -23,6 +24,10 @@ public final class Geom {
 
 	public static boolean nearZero(double val) {
 		return Math.abs(val) <= NEAR_ZERO_EPS;
+	}
+	
+	public static boolean nearZeroSq(double valSq) {
+		return Math.abs(valSq) <= NEAR_ZERO_EPS_SQ;
 	}
 
 	public static record Line2(Vector2D w, double b) {
