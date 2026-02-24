@@ -7,10 +7,7 @@ import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
 import static com.github.micycle1.grassfire4j.geom.Geom.getUniqueTimes;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
 
-import java.util.ArrayList;
 import java.util.Arrays;
-
-import java.util.List;
 
 import org.locationtech.jts.math.Vector2D;
 
@@ -24,6 +21,9 @@ import com.github.micycle1.grassfire4j.model.Model.VertexRef;
  * Computes candidate collapse/flip/split events for kinetic triangles.
  */
 public class CollapseEventComputer {
+
+	// side indices are only 0, 1, or 2, so can encode them in an int bitmask
+	private static final int ALL_SIDES_MASK = 0b111;
 
 	public static double findGt(double[] a, double x) {
 		double min = Double.NaN;
@@ -160,9 +160,11 @@ public class CollapseEventComputer {
 		out[2] = dist2(po, pd);
 	}
 
-	private static Event edgeEvt(KineticTriangle t, double time, List<Integer> sides) { return new Event(time, t, sides, EventType.EDGE, t.getType()); }
-	private static Event flipEvt(KineticTriangle t, double time, int side) { return new Event(time, t, List.of(side), EventType.FLIP, t.getType()); }
-	private static Event splitEvt(KineticTriangle t, double time, int side) { return new Event(time, t, List.of(side), EventType.SPLIT, t.getType()); }
+	private static int sideMask(int side) { return 1 << side; }
+
+	private static Event edgeEvt(KineticTriangle t, double time, int sideMask) { return new Event(time, t, sideMask, EventType.EDGE, t.getType()); }
+	private static Event flipEvt(KineticTriangle t, double time, int side) { return new Event(time, t, sideMask(side), EventType.FLIP, t.getType()); }
+	private static Event splitEvt(KineticTriangle t, double time, int side) { return new Event(time, t, sideMask(side), EventType.SPLIT, t.getType()); }
 
 	private static Event finite0(KineticTriangle tri, double now, boolean strictGt) {
 		KineticVertex o = (KineticVertex)tri.vertices[0], d = (KineticVertex)tri.vertices[1], a = (KineticVertex)tri.vertices[2];
@@ -171,16 +173,17 @@ public class CollapseEventComputer {
 		for (double t : tArea) {
 			if (nearZero(Math.abs(t - now))) {
 				sideD2(o, d, a, now, d2);
-				List<Integer> zeros = new ArrayList<>();
+				int zerosMask = 0;
 				for (int i=0; i<3; i++) {
 					if (nearZero(Math.sqrt(d2[i]))) {
-						zeros.add(i);
+						zerosMask |= sideMask(i);
 					}
 				}
-				if (zeros.size() == 1) {
-					return edgeEvt(tri, now, zeros);
+				int zerosCount = Integer.bitCount(zerosMask);
+				if (zerosCount == 1) {
+					return edgeEvt(tri, now, zerosMask);
 				}
-				if (zeros.size() == 3) {
+				if (zerosCount == 3) {
 					throw new IllegalStateException("0-triangle collapsing to point at now");
 				}
 				int mx = d2[0] > d2[1] ? (d2[0] > d2[2] ? 0 : 2) : (d2[1] > d2[2] ? 1 : 2);
@@ -207,17 +210,18 @@ public class CollapseEventComputer {
 			// Python tie-break: try classify as edge by relative-min; else flip.
 			sideD2(o, d, a, te, d2);
 			double m = Math.min(d2[0], Math.min(d2[1], d2[2]));
-			List<Integer> relMin = new ArrayList<>();
+			int relMinMask = 0;
 			for (int i=0; i<3; i++) {
 				if (nearZero(d2[i] - m)) {
-					relMin.add(i);
+					relMinMask |= sideMask(i);
 				}
 			}
-			if (relMin.size() == 3) {
-				return edgeEvt(tri, te, List.of(0,1,2));
+			int relMinCount = Integer.bitCount(relMinMask);
+			if (relMinCount == 3) {
+				return edgeEvt(tri, te, ALL_SIDES_MASK);
 			}
-			if (relMin.size() == 1) {
-				return edgeEvt(tri, te, List.of(relMin.get(0)));
+			if (relMinCount == 1) {
+				return edgeEvt(tri, te, relMinMask);
 			}
 			// otherwise fall back to flip using area time (same)
 			sideD2(o, d, a, ta, d2);
@@ -230,17 +234,18 @@ public class CollapseEventComputer {
 			return flipEvt(tri, ta, d2[0] > d2[1] ? (d2[0] > d2[2] ? 0 : 2) : (d2[1] > d2[2] ? 1 : 2));
 		}
 		sideD2(o, d, a, te, d2);
-		List<Integer> zeros = new ArrayList<>();
+		int zerosMask = 0;
 		for (int i=0; i<3; i++) {
 			if (nearZero(d2[i])) {
-				zeros.add(i);
+				zerosMask |= sideMask(i);
 			}
 		}
-		if (zeros.size() == 3) {
-			return edgeEvt(tri, te, List.of(0,1,2));
+		int zerosCount = Integer.bitCount(zerosMask);
+		if (zerosCount == 3) {
+			return edgeEvt(tri, te, ALL_SIDES_MASK);
 		}
-		if (zeros.size() == 1) {
-			return edgeEvt(tri, te, List.of(zeros.get(0)));
+		if (zerosCount == 1) {
+			return edgeEvt(tri, te, zerosMask);
 		}
 		throw new IllegalStateException("0-triangle: edge-collapse time computed but not exactly 1 or 3 sides collapsed");
 	}
@@ -256,14 +261,14 @@ public class CollapseEventComputer {
 		// if apex hits wavefront edge "now", classify immediately (edge / split / flip).
 		if (!Double.isNaN(tc) && nearZero(Math.abs(tc - now))) {
 			sideD2(o, d, a, now, d2);
-			List<Integer> zeroLenSides = new ArrayList<>();
+			int zeroLenMask = 0;
 			for (int i = 0; i < 3; i++) {
 				if (nearZero(Math.sqrt(d2[i]))) {
-					zeroLenSides.add(i);
+					zeroLenMask |= sideMask(i);
 				}
 			}
-			if (zeroLenSides.size() == 1) {
-				return edgeEvt(tri, now, List.of(zeroLenSides.get(0)));
+			if (Integer.bitCount(zeroLenMask) == 1) {
+				return edgeEvt(tri, now, zeroLenMask);
 			}
 			// else: choose longest side by length; split if it's the wavefront side, else flip.
 			double l0 = Math.sqrt(d2[0]), l1 = Math.sqrt(d2[1]), l2 = Math.sqrt(d2[2]);
@@ -292,13 +297,13 @@ public class CollapseEventComputer {
 			double t = (!Double.isNaN(ta) && ta < tc) ? ta : tc;
 			sideD2(o, d, a, t, d2);
 			double mx = Math.max(d2[0], Math.max(d2[1], d2[2]));
-			List<Integer> longs = new ArrayList<>();
+			int longMask = 0;
 			for (int i=0; i<3; i++) {
 				if (nearZero(Math.sqrt(d2[i]) - Math.sqrt(mx))) {
-					longs.add(i);
+					longMask |= sideMask(i);
 				}
 			}
-			if (longs.size() == 1 && longs.get(0) == wfSide) {
+			if (longMask == sideMask(wfSide)) {
 				return splitEvt(tri, tc, wfSide);
 			}
 			int zCt = 0, zIdx = -1;
@@ -306,16 +311,16 @@ public class CollapseEventComputer {
 				if (nearZero(Math.sqrt(d2[i]))) { zCt++; zIdx = i; }
 			}
 			if (zCt == 1) {
-				return edgeEvt(tri, t, List.of(zIdx));
+				return edgeEvt(tri, t, sideMask(zIdx));
 			}
 			return flipEvt(tri, t, d2[0] > d2[1] ? (d2[0] > d2[2] ? 0 : 2) : (d2[1] > d2[2] ? 1 : 2));
 		}
 		if (!Double.isNaN(te) && Double.isNaN(tc)) {
-			return edgeEvt(tri, te, List.of(wfSide));
+			return edgeEvt(tri, te, sideMask(wfSide));
 		}
 		if (te <= tc) {
 			sideD2(o, d, a, te, d2);
-			return edgeEvt(tri, te, List.of(d2[0] < d2[1] ? (d2[0] < d2[2] ? 0 : 2) : (d2[1] < d2[2] ? 1 : 2)));
+			return edgeEvt(tri, te, sideMask(d2[0] < d2[1] ? (d2[0] < d2[2] ? 0 : 2) : (d2[1] < d2[2] ? 1 : 2)));
 		}
 		sideD2(o, d, a, tc, d2);
 		int zCt = 0, zIdx = -1;
@@ -323,10 +328,10 @@ public class CollapseEventComputer {
 			if (nearZero(Math.sqrt(d2[i]))) { zCt++; zIdx = i; }
 		}
 		if (zCt == 1) {
-			return edgeEvt(tri, tc, List.of(zIdx));
+			return edgeEvt(tri, tc, sideMask(zIdx));
 		}
 		if (zCt == 3) {
-			return edgeEvt(tri, tc, List.of(0,1,2));
+			return edgeEvt(tri, tc, ALL_SIDES_MASK);
 		}
 		int mx = d2[0] > d2[1] ? (d2[0] > d2[2] ? 0 : 2) : (d2[1] > d2[2] ? 1 : 2);
 		return tri.neighbours[mx] == null ? splitEvt(tri, tc, mx) : flipEvt(tri, tc, mx);
@@ -358,10 +363,10 @@ public class CollapseEventComputer {
 			if (nearZero(l[i] - mn)) { zCt++; zIdx = i; }
 		}
 		if (zCt == 3) {
-			return edgeEvt(tri, t, List.of(0,1,2));
+			return edgeEvt(tri, t, ALL_SIDES_MASK);
 		}
 		if (zCt == 1) {
-			return edgeEvt(tri, t, List.of(zIdx));
+			return edgeEvt(tri, t, sideMask(zIdx));
 		}
 		if (zCt == 2) {
 			throw new IllegalStateException("2-triangle: impossible configuration (two sides are equal-min)");
@@ -385,20 +390,21 @@ public class CollapseEventComputer {
 		double tArea = strictGt ? findGt(areaCollapseTimes(o, d, a, now), now) : findGte(areaCollapseTimes(o, d, a, now), now);
 
 		if (!Double.isNaN(tEdge)) {
-			List<Integer> idx = new ArrayList<>();
+			int idxMask = 0;
 			for (int i=0; i<3; i++) {
 				if (nearZero(Math.sqrt(d2AtTe[i]))) {
-					idx.add(i);
+					idxMask |= sideMask(i);
 				}
 			}
-			List<Integer> sides = idx.isEmpty() ? List.of(0,1,2) : idx;
-			if (sides.size() == 2 || sides.isEmpty()) {
-				sides = List.of(0,1,2);
+			int sideMask = idxMask == 0 ? ALL_SIDES_MASK : idxMask;
+			int sideCount = Integer.bitCount(sideMask);
+			if (sideCount == 2 || sideCount == 0) {
+				sideMask = ALL_SIDES_MASK;
 			}
-			return edgeEvt(tri, tEdge, sides);
+			return edgeEvt(tri, tEdge, sideMask);
 		}
 		if (!Double.isNaN(tArea)) {
-			return edgeEvt(tri, tArea, List.of(0,1,2));
+			return edgeEvt(tri, tArea, ALL_SIDES_MASK);
 		}
 		return null;
 	}
@@ -411,12 +417,12 @@ public class CollapseEventComputer {
 			l[i] = Math.sqrt(l[i]);
 		}
 		double mn = Math.min(l[0], Math.min(l[1], l[2]));
-		List<Integer> sides = new ArrayList<>();
+		int mask = 0;
 		for (int i=0; i<3; i++) {
 			if (nearZero(l[i] - mn)) {
-				sides.add(i);
+				mask |= sideMask(i);
 			}
 		}
-		return edgeEvt(tri, time, sides);
+		return edgeEvt(tri, time, mask);
 	}
 }

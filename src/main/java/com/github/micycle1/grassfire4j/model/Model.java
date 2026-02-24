@@ -159,14 +159,23 @@ public final class Model {
 
 		public final double time;
 		public final KineticTriangle tri;
-		public final List<Integer> side;
+		public final int sideMask;
 		public final EventType tp;
 		public final int triangleTp;
 		public boolean valid = true;
 		public long counter;
 
-		public Event(double time, KineticTriangle tri, List<Integer> side, EventType tp, int triangleTp) {
-			this.time = time; this.tri = tri; this.side = side; this.tp = tp; this.triangleTp = triangleTp;
+		public Event(double time, KineticTriangle tri, int sideMask, EventType tp, int triangleTp) {
+			this.time = time; this.tri = tri; this.sideMask = sideMask; this.tp = tp; this.triangleTp = triangleTp;
+		}
+
+		public int sideCount() { return Integer.bitCount(sideMask); }
+
+		public int singleSide() {
+			if (sideCount() != 1) {
+				throw new IllegalStateException("Event does not have exactly one side (mask=" + sideMask + ")");
+			}
+			return Integer.numberOfTrailingZeros(sideMask);
 		}
 
 		@Override public int compareTo(Event o) {

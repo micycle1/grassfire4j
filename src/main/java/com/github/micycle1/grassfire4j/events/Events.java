@@ -39,6 +39,7 @@ import com.github.micycle1.grassfire4j.model.Model.VertexRef;
 public class Events {
 
 	private static final int LOOP_MAX = 50_000;
+	private static final int ALL_SIDES_MASK = 0b111;
 
 	public static class EventQueue {
 		private final PriorityQueue<Event> heap = new PriorityQueue<>();
@@ -158,7 +159,7 @@ public class Events {
 		if (tri.event != null) { queue.discard(tri.event); imm.remove(tri.event); }
 		Event e = CollapseEventComputer.computeNewEdgeCollapse(tri, now);
 		if (tri.getType() == 3) {
-			e = new Event(now, tri, List.of(0,1,2), EventType.EDGE, 3);
+			e = new Event(now, tri, ALL_SIDES_MASK, EventType.EDGE, 3);
 		}
 		tri.event = e;
 		imm.addLast(e);
@@ -201,7 +202,7 @@ public class Events {
 	/** Python handle_edge_event_1side: for type-3 triangle where only 1 side is reported collapsing. */
 	public static void handleEdge1Side(Event evt, int step, Skeleton skel, EventQueue q, Deque<Event> imm) {
 		KineticTriangle t = evt.tri;
-		int e = evt.side.get(0);
+		int e = evt.singleSide();
 		double now = evt.time;
 
 		KineticVertex v0 = (KineticVertex) t.vertices[e];
@@ -218,7 +219,7 @@ public class Events {
 
 	public static void handleEdge(Event evt, int step, Skeleton skel, EventQueue q, Deque<Event> imm) {
 		KineticTriangle t = evt.tri;
-		int e = evt.side.get(0);
+		int e = evt.singleSide();
 		double now = evt.time;
 		KineticVertex v1 = (KineticVertex)t.vertices[ccw(e)], v2 = (KineticVertex)t.vertices[cw(e)];
 
@@ -287,7 +288,7 @@ public class Events {
 
 	public static void handleFlip(Event evt, double now, EventQueue q, Deque<Event> imm) {
 		KineticTriangle t = evt.tri;
-		int tSide = evt.side.get(0);
+		int tSide = evt.singleSide();
 		KineticTriangle n = t.neighbours[tSide];
 		int nSide = n.indexOfNeighbour(t);
 		flip(t, tSide, n, nSide);
@@ -297,7 +298,7 @@ public class Events {
 
 	public static void handleSplit(Event evt, int step, Skeleton skel, EventQueue q, Deque<Event> imm) {
 		KineticTriangle t = evt.tri;
-		int e = evt.side.get(0);
+		int e = evt.singleSide();
 		double now = evt.time;
 
 		if (t.neighbours[e] != null) {
@@ -621,7 +622,7 @@ public class Events {
 			}
 
 			if (evt.tp == EventType.EDGE) {
-				if (evt.side.size() == 3) {
+				if (evt.sideCount() == 3) {
 					stopKVertices(Arrays.asList((KineticVertex)evt.tri.vertices[0], (KineticVertex)evt.tri.vertices[1], (KineticVertex)evt.tri.vertices[2]), step, now, skel, null);
 					for (var n : evt.tri.neighbours) {
 						if (n != null && n.event != null && n.stopsAt == null) {
@@ -630,9 +631,9 @@ public class Events {
 						}
 					}
 					evt.tri.stopsAt = now;
-				} else if (evt.side.size() == 2) {
+				} else if (evt.sideCount() == 2) {
 					throw new RuntimeException("Impossible configuration: triangle has 2 sides collapsing");
-				} else if (evt.side.size() == 1 && evt.tri.getType() == 3) {
+				} else if (evt.sideCount() == 1 && evt.tri.getType() == 3) {
 					handleEdge1Side(evt, step, skel, q, imm);
 				} else {
 					handleEdge(evt, step, skel, q, imm);
