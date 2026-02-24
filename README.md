@@ -16,3 +16,16 @@ This project is the first full kinetic straight‑skeleton implementation availa
 - Adapter-based input pipeline (`InputMesh`) makes it easy to plug in user-supplied adapters for other input types.
 - Supports variable edge weights.
 - Produces a Skeleton model with nodes, kinetic vertices and skeleton segments suitable for visualisation or export.
+
+## Example
+
+```java
+WKTReader reader = new WKTReader();
+Polygon polygon = (Polygon) reader.read(
+		"POLYGON ((0 0, 20 0, 20 10, 10 10, 10 20, 0 20, 0 0))");
+
+var skeleton = Grassfire.computeSkeleton(polygon);
+MultiLineString bones = skeleton.asMultiLineString();
+
+System.out.println(bones.toText());
+```

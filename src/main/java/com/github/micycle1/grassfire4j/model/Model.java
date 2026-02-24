@@ -5,9 +5,16 @@ import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.MultiLineString;
+import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.math.Vector2D;
+import org.locationtech.jts.operation.polygonize.Polygonizer;
 
 import com.github.micycle1.grassfire4j.geom.Geom.Line2;
 import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
@@ -195,12 +202,27 @@ public final class Model {
 		}
 	}
 
+	/**
+	 * Straight-skeleton result model produced by the kinetic solver.
+	 * <p>
+	 * Contains skeleton nodes, kinetic vertices, and helper methods to export the
+	 * resulting linework and derived polygon faces in JTS geometry form.
+	 */
 	public static class Skeleton {
 		public List<SkeletonNode> skNodes = new ArrayList<>();
 		public List<KineticVertex> vertices = new ArrayList<>();
 		public List<KineticTriangle> triangles = new ArrayList<>();
 
 		public record Segment(Coordinate p1, Coordinate p2, Integer info1, Integer info2) {}
+
+		/**
+		 * Returns all skeleton segments as endpoint pairs.
+		 * <p>
+		 * Stopped vertices produce finite segments from start node to stop node.
+		 * Non-stopped vertices are represented by a long ray sampled at {@code t=1000}.
+		 *
+		 * @return list of skeleton segments
+		 */
 		public List<Segment> segments() {
 			List<Segment> segs = new ArrayList<>();
 			for (var v : vertices) {
@@ -214,6 +236,50 @@ public final class Model {
 				}
 			}
 			return segs;
+		}
+
+		/**
+		 * Returns skeleton segments as a JTS {@link MultiLineString} using a default
+		 * {@link GeometryFactory}.
+		 *
+		 * @return skeleton linework
+		 */
+		public MultiLineString asMultiLineString() {
+			return asMultiLineString(new GeometryFactory());
+		}
+
+		/**
+		 * Returns skeleton segments as a JTS {@link MultiLineString}.
+		 *
+		 * @param geometryFactory geometry factory used to build the output geometry
+		 * @return skeleton linework
+		 */
+		public MultiLineString asMultiLineString(GeometryFactory geometryFactory) {
+			List<Segment> segs = segments();
+			LineString[] lines = new LineString[segs.size()];
+			for (int i = 0; i < segs.size(); i++) {
+				Segment s = segs.get(i);
+				lines[i] = geometryFactory.createLineString(new Coordinate[] { s.p1(), s.p2() });
+			}
+			return geometryFactory.createMultiLineString(lines);
+		}
+
+		/**
+		 * Polygonizes the partition induced by the input polygon boundary and skeleton
+		 * linework.
+		 * <p>
+		 * The caller should pass the same polygon used to compute this skeleton.
+		 *
+		 * @param polygon source polygon used for skeleton construction
+		 * @return polygonized face geometry
+		 */
+		public Geometry asPolygonFaces(Polygon polygon) {
+			Objects.requireNonNull(polygon, "polygon");
+			Geometry coverage = polygon.getBoundary().union(asMultiLineString(polygon.getFactory()));
+			Polygonizer polygonizer = new Polygonizer();
+			polygonizer.setCheckRingsValid(false);
+			polygonizer.add(coverage);
+			return polygonizer.getGeometry();
 		}
 	}
 }
