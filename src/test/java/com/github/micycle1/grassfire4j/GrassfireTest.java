@@ -2,6 +2,7 @@ package com.github.micycle1.grassfire4j;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
 
 import java.io.IOException;
@@ -26,6 +27,7 @@ import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.index.strtree.STRtree;
 
+import com.github.micycle1.grassfire4j.input.InputMesh;
 import com.github.micycle1.grassfire4j.input.PolygonAdapter;
 import com.github.micycle1.grassfire4j.model.Model.Skeleton.Segment;
 
@@ -73,6 +75,24 @@ class GrassfireTest {
 		Set<String> weightedSegments = canonicalSegments(weighted.segments());
 
 		assertFalse(unweightedSegments.equals(weightedSegments), "Weighted and unweighted skeletons should differ");
+	}
+
+	@Test
+	void boundaryVertexInfoAutoAssignedByIndex() {
+		List<List<Coordinate>> rings = List.of(List.of(
+				c(0.0, 0.0),
+				c(10.0, 0.0),
+				c(10.0, 10.0),
+				c(0.0, 10.0),
+				c(0.0, 0.0)));
+		Polygon polygon = toPolygon(rings);
+
+		var mesh = new PolygonAdapter().toMesh(polygon);
+
+		assertEquals(Integer.valueOf(0), findVertexInfo(mesh, 0.0, 0.0));
+		assertEquals(Integer.valueOf(1), findVertexInfo(mesh, 10.0, 0.0));
+		assertEquals(Integer.valueOf(2), findVertexInfo(mesh, 10.0, 10.0));
+		assertEquals(Integer.valueOf(3), findVertexInfo(mesh, 0.0, 10.0));
 	}
 
 	private void runSkeletonIntegrity(Path csvFile) throws IOException {
@@ -243,6 +263,16 @@ class GrassfireTest {
 
 	private static double round6(double v) {
 		return Math.rint(v * 1_000_000.0) / 1_000_000.0;
+	}
+
+	private static Integer findVertexInfo(InputMesh mesh, double x, double y) {
+		for (var v : mesh.vertices) {
+			if (pointEqual(new PointKey(v.x, v.y), new PointKey(x, y))) {
+				return v.info;
+			}
+		}
+		fail("Expected boundary vertex at " + x + "," + y);
+		return null; // unreachable
 	}
 
 	private static Map<String, Integer> expectedSegments() {

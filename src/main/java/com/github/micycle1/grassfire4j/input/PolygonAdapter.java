@@ -70,10 +70,22 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		}
 
 		List<Edge> boundaryEdges = getBoundaryEdgesInOrder(polygon);
+		List<Vector2D> boundaryVertices = getBoundaryVerticesInOrder(polygon);
 		if (edgeWeights != null && edgeWeights.size() != boundaryEdges.size()) {
 			throw new IllegalArgumentException(
 					"edgeWeights size (" + edgeWeights.size() + ") must equal boundary edge count (" + boundaryEdges.size() + ")");
 		}
+
+		Map<Vector2D, Integer> boundaryVertexInfoMap = new HashMap<>();
+		for (int i = 0; i < boundaryVertices.size(); i++) {
+			Vector2D vertex = boundaryVertices.get(i);
+			Integer info = Integer.valueOf(i);
+			Integer existing = boundaryVertexInfoMap.putIfAbsent(vertex, info);
+			if (existing != null && !existing.equals(info)) {
+				throw new IllegalArgumentException("Conflicting info values mapped to the same boundary vertex");
+			}
+		}
+		final Map<Vector2D, Integer> boundaryInfoByVertex = boundaryVertexInfoMap;
 
 		final var coords = polygon.getCoordinates();
 		final double estPointSpacing = coords[0].distance(coords[1]);
@@ -118,7 +130,8 @@ public class PolygonAdapter implements Adapter<Polygon> {
 			for (int i = 0; i < 3; i++) {
 				Vector2D p = new Vector2D(tri[i].getX(), tri[i].getY());
 				vIdx[i] = vIndex.computeIfAbsent(p, pt -> {
-					vertices.add(new InputVertex(pt.getX(), pt.getY(), true, null));
+					Integer info = boundaryInfoByVertex == null ? null : boundaryInfoByVertex.get(pt);
+					vertices.add(new InputVertex(pt.getX(), pt.getY(), true, info));
 					return vertices.size() - 1;
 				});
 			}
@@ -160,6 +173,16 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		return boundaryEdges;
 	}
 
+	private static List<Vector2D> getBoundaryVerticesInOrder(Polygon polygon) {
+		List<Vector2D> boundaryVertices = new ArrayList<>();
+		Set<Vector2D> seen = new HashSet<>();
+		addRingVerticesInOrder(polygon.getExteriorRing(), boundaryVertices, seen);
+		for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
+			addRingVerticesInOrder(polygon.getInteriorRingN(i), boundaryVertices, seen);
+		}
+		return boundaryVertices;
+	}
+
 	private static void addRingVertices(LineString ring, List<Vertex> out, Set<Vector2D> seen) {
 		Coordinate[] coords = ring.getCoordinates();
 		for (int i = 0; i < coords.length - 1; i++) {
@@ -196,6 +219,16 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		Coordinate[] coords = ring.getCoordinates();
 		for (int i = 0; i < coords.length - 1; i++) {
 			edges.add(new Edge(new Vector2D(coords[i].x, coords[i].y), new Vector2D(coords[i + 1].x, coords[i + 1].y)));
+		}
+	}
+
+	private static void addRingVerticesInOrder(LineString ring, List<Vector2D> out, Set<Vector2D> seen) {
+		Coordinate[] coords = ring.getCoordinates();
+		for (int i = 0; i < coords.length - 1; i++) {
+			Vector2D point = new Vector2D(coords[i].x, coords[i].y);
+			if (seen.add(point)) {
+				out.add(point);
+			}
 		}
 	}
 }
