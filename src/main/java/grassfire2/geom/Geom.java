@@ -16,7 +16,7 @@ public final class Geom {
 	public static Vec2 add(Vec2 a, Vec2 b) { return new Vec2(a.x + b.x, a.y + b.y); }
 	public static Vec2 mul(Vec2 a, double s) { return new Vec2(a.x * s, a.y * s); }
 	public static double norm2(Vec2 a) { return a.x * a.x + a.y * a.y; }
-	public static double norm(Vec2 a) { return Math.hypot(a.x, a.y); }
+	public static double norm(Vec2 a) { return Math.sqrt(a.x * a.x + a.y * a.y); }
 	public static double dist(Vec2 start, Vec2 end) { return norm(sub(end, start)); }
 	public static double dist2(Vec2 start, Vec2 end) { return norm2(sub(end, start)); }
 

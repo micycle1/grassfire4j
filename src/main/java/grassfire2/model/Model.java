@@ -37,6 +37,12 @@ public final class Model {
 	}
 
 	public static class KineticVertex implements VertexRef {
+		public enum Turn {
+			RIGHT_REFLEX,
+			LEFT_CONVEX,
+			STRAIGHT
+		}
+
 		public Vec2 origin, velocity;
 		public Double startsAt, stopsAt;
 		public SkeletonNode startNode, stopNode;
@@ -44,7 +50,7 @@ public final class Model {
 		public WaveFront wfl, wfr;
 		public int info = 0;
 		public boolean infFast = false, internal = false;
-		public String turn;
+		public Turn turn;
 
 		public record HistEntry(double start, Double stop, VertexRef ref) {}
 		public final List<HistEntry> leftHist = new ArrayList<>();

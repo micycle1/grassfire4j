@@ -201,7 +201,9 @@ public final class Core {
 				InputVertex head = mesh.vertices.get(tFirst.v[ccw(first.side())]);
 
 				int turn = Orientation.index(new Coordinate(tail.x, tail.y), new Coordinate(mid.x, mid.y), new Coordinate(head.x, head.y));
-				String turnType = turn == -1 ? "RIGHT - REFLEX" : (turn == 1 ? "LEFT - CONVEX" : "STRAIGHT");
+				KineticVertex.Turn turnType = turn == -1
+						? KineticVertex.Turn.RIGHT_REFLEX
+						: (turn == 1 ? KineticVertex.Turn.LEFT_CONVEX : KineticVertex.Turn.STRAIGHT);
 
 				WaveFront right = ktriangles.get(first.tIdx()).wavefrontSupportLines[cw(first.side())];
 				WaveFront left = ktriangles.get(last.tIdx()).wavefrontSupportLines[ccw(last.side())];
