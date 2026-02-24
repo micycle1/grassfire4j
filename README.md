@@ -34,3 +34,9 @@ System.out.println(bones.toText());
 
 ### Maven / Gradle
 grassfire4j is available for Maven / Gradle via [JitPack](https://jitpack.io/#micycle1/grassfire4j).
+
+## Illustrations
+
+<p align="center">
+  <img src="resources/a.png" width="32%" /><img src="resources/b.png" width="32%" /><img src="resources/c.png" width="32%" />
+</p>
