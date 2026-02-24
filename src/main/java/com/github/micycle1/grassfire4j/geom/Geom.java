@@ -2,8 +2,6 @@ package com.github.micycle1.grassfire4j.geom;
 
 import java.util.Arrays;
 
-
-
 import org.locationtech.jts.math.Vector2D;
 
 /**
@@ -15,12 +13,16 @@ import org.locationtech.jts.math.Vector2D;
 public final class Geom {
 
 	public static final double STOP_EPS = 1e-9;
+	public static final double TIME_UNIQUE_TOL = 1e-9;
+	public static final double NEAR_ZERO_EPS = 1e-10;
 	public static final double COS_179_999999 = Math.cos(Math.toRadians(179.999999));
 
-	public static double dist2(Vector2D start, Vector2D end) { return end.subtract(start).lengthSquared(); }
+	public static double dist2(Vector2D start, Vector2D end) {
+		return end.subtract(start).lengthSquared();
+	}
 
 	public static boolean nearZero(double val) {
-		return Math.abs(val) <= 1e-10;
+		return Math.abs(val) <= NEAR_ZERO_EPS;
 	}
 
 	public static record Line2(Vector2D w, double b) {
@@ -115,9 +117,12 @@ public final class Geom {
 		for (int i = 1; i < n; i++) {
 			double val = sorted[i];
 			double diff = Math.abs(val - first);
-			if (diff <= Math.abs(0.0 * (first + val) * 0.5) || diff <= 1e-7) {
-				continue;
-			}
+			 // use a combined relative/absolute tolerance
+	        double relTol = Math.abs((first + val) * 0.5) * TIME_UNIQUE_TOL;
+	        double absTol = TIME_UNIQUE_TOL;
+	        if (diff <= Math.max(relTol, absTol)) {
+	            continue;
+	        }
 			out[m++] = val;
 			first = val;
 		}

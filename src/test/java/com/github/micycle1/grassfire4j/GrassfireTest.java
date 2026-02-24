@@ -208,7 +208,7 @@ class GrassfireTest {
 	}
 
 	private static boolean pointEqual(PointKey a, PointKey b) {
-		double tol = 1e-9;
+		double tol = 1e-10;
 		return Math.abs(a.x - b.x) < tol && Math.abs(a.y - b.y) < tol;
 	}
 
