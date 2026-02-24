@@ -13,6 +13,7 @@ import org.locationtech.jts.algorithm.Orientation;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Polygon;
+import org.locationtech.jts.math.Vector2D;
 import org.tinfour.common.IConstraint;
 import org.tinfour.common.PolygonConstraint;
 import org.tinfour.common.Vertex;
@@ -20,7 +21,6 @@ import org.tinfour.standard.IncrementalTin;
 import org.tinfour.utils.HilbertSort;
 import org.tinfour.utils.TriangleCollector;
 
-import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 import com.github.micycle1.grassfire4j.input.InputMesh.InputVertex;
 import com.github.micycle1.grassfire4j.input.InputMeshBuilder.EdgeRef;
 
@@ -33,9 +33,9 @@ import com.github.micycle1.grassfire4j.input.InputMeshBuilder.EdgeRef;
  */
 public class PolygonAdapter implements Adapter<Polygon> {
 
-	private record Edge(Vec2 a, Vec2 b) {
-		Edge(Vec2 a, Vec2 b) {
-			if (a.x() < b.x() || (a.x() == b.x() && a.y() < b.y())) {
+	private record Edge(Vector2D a, Vector2D b) {
+		Edge(Vector2D a, Vector2D b) {
+			if (a.getX() < b.getX() || (a.getX() == b.getX() && a.getY() < b.getY())) {
 				this.a = a;
 				this.b = b;
 			} else {
@@ -80,7 +80,7 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		IncrementalTin tin = new IncrementalTin(estPointSpacing);
 
 		List<Vertex> seedVertices = new ArrayList<>();
-		Set<Vec2> uniqueVertices = new HashSet<>();
+		Set<Vector2D> uniqueVertices = new HashSet<>();
 		addRingVertices(polygon.getExteriorRing(), seedVertices, uniqueVertices);
 		for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
 			addRingVertices(polygon.getInteriorRingN(i), seedVertices, uniqueVertices);
@@ -109,16 +109,16 @@ public class PolygonAdapter implements Adapter<Polygon> {
 			tin.addConstraints(constraints, false);
 		}
 
-		Map<Vec2, Integer> vIndex = new HashMap<>();
+		Map<Vector2D, Integer> vIndex = new HashMap<>();
 		List<InputVertex> vertices = new ArrayList<>();
 		List<int[]> triVertices = new ArrayList<>();
 
 		TriangleCollector.visitTrianglesConstrained(tin, tri -> {
 			int[] vIdx = new int[3];
 			for (int i = 0; i < 3; i++) {
-				Vec2 p = new Vec2(tri[i].getX(), tri[i].getY());
+				Vector2D p = new Vector2D(tri[i].getX(), tri[i].getY());
 				vIdx[i] = vIndex.computeIfAbsent(p, pt -> {
-					vertices.add(new InputVertex(pt.x(), pt.y(), true, null));
+					vertices.add(new InputVertex(pt.getX(), pt.getY(), true, null));
 					return vertices.size() - 1;
 				});
 			}
@@ -160,12 +160,12 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		return boundaryEdges;
 	}
 
-	private static void addRingVertices(LineString ring, List<Vertex> out, Set<Vec2> seen) {
+	private static void addRingVertices(LineString ring, List<Vertex> out, Set<Vector2D> seen) {
 		Coordinate[] coords = ring.getCoordinates();
 		for (int i = 0; i < coords.length - 1; i++) {
-			Vec2 point = new Vec2(coords[i].x, coords[i].y);
+			Vector2D point = new Vector2D(coords[i].x, coords[i].y);
 			if (seen.add(point)) {
-				out.add(new Vertex(point.x(), point.y(), Double.NaN));
+				out.add(new Vertex(point.getX(), point.getY(), Double.NaN));
 			}
 		}
 	}
@@ -195,7 +195,7 @@ public class PolygonAdapter implements Adapter<Polygon> {
 	private static void addRingEdges(LineString ring, List<Edge> edges) {
 		Coordinate[] coords = ring.getCoordinates();
 		for (int i = 0; i < coords.length - 1; i++) {
-			edges.add(new Edge(new Vec2(coords[i].x, coords[i].y), new Vec2(coords[i+1].x, coords[i+1].y)));
+			edges.add(new Edge(new Vector2D(coords[i].x, coords[i].y), new Vector2D(coords[i + 1].x, coords[i + 1].y)));
 		}
 	}
 }

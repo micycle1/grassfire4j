@@ -11,8 +11,8 @@ import java.util.Map;
 
 import org.locationtech.jts.algorithm.Orientation;
 import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.math.Vector2D;
 
-import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
 import com.github.micycle1.grassfire4j.input.InputMesh;
 import com.github.micycle1.grassfire4j.input.InputMesh.InputTriangle;
@@ -154,13 +154,13 @@ public final class Core {
 		for (int i = 0; i < mesh.vertices.size(); i++) {
 			InputVertex v = mesh.vertices.get(i);
 			if (v.isFinite) {
-				nodes.put(i, new SkeletonNode(new Vec2(v.x, v.y), -1, v.info));
+				nodes.put(i, new SkeletonNode(new Vector2D(v.x, v.y), -1, v.info));
 				sumX += v.x; sumY += v.y; count++;
 			} else {
-				infNodes.put(i, new InfiniteVertex(new Vec2(v.x, v.y)));
+				infNodes.put(i, new InfiniteVertex(new Vector2D(v.x, v.y)));
 			}
 		}
-		InfiniteVertex centroid = new InfiniteVertex(new Vec2(count > 0 ? sumX / count : 0, count > 0 ? sumY / count : 0));
+		InfiniteVertex centroid = new InfiniteVertex(new Vector2D(count > 0 ? sumX / count : 0, count > 0 ? sumY / count : 0));
 
 		List<KineticTriangle> ktriangles = new ArrayList<>();
 		for (int i = 0; i < mesh.triangles.size(); i++) {
@@ -181,7 +181,7 @@ public final class Core {
 				if (t.c[i] != null) {
 					InputVertex start = mesh.vertices.get(t.v[ccw(i)]);
 					InputVertex end = mesh.vertices.get(t.v[cw(i)]);
-					k.wavefrontSupportLines[i] = new WaveFront(new Vec2(start.x, start.y), new Vec2(end.x, end.y), null, t.c[i].weight(), null);
+					k.wavefrontSupportLines[i] = new WaveFront(new Vector2D(start.x, start.y), new Vector2D(end.x, end.y), null, t.c[i].weight(), null);
 				}
 			}
 			for (int i = 0; i < 3; i++) {
@@ -217,7 +217,7 @@ public final class Core {
 
 				KineticVertex kv = new KineticVertex();
 				kv.info = ++ct;
-				kv.origin = new Vec2(mesh.vertices.get(vIdx).x, mesh.vertices.get(vIdx).y);
+				kv.origin = new Vector2D(mesh.vertices.get(vIdx).x, mesh.vertices.get(vIdx).y);
 				kv.velocity = getBisector(left, right);
 				kv.startNode = nodes.get(vIdx);
 				kv.startsAt = 0.0;
@@ -249,7 +249,7 @@ public final class Core {
 			}
 		}
 
-		ktriangles.sort(Comparator.comparingDouble((KineticTriangle t) -> t.vertices[0].positionAt(0).y()).thenComparingDouble(t -> t.vertices[0].positionAt(0).x()));
+		ktriangles.sort(Comparator.comparingDouble((KineticTriangle t) -> t.vertices[0].positionAt(0).getY()).thenComparingDouble(t -> t.vertices[0].positionAt(0).getX()));
 		skel.skNodes.addAll(nodes.values());
 		skel.triangles = ktriangles;
 		return skel;

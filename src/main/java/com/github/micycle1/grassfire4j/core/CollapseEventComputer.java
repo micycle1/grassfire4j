@@ -3,17 +3,16 @@ package com.github.micycle1.grassfire4j.core;
 import static com.github.micycle1.grassfire4j.core.Core.ccw;
 import static com.github.micycle1.grassfire4j.core.Core.cw;
 import static com.github.micycle1.grassfire4j.geom.Geom.STOP_EPS;
-import static com.github.micycle1.grassfire4j.geom.Geom.dot;
 import static com.github.micycle1.grassfire4j.geom.Geom.getUniqueTimes;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
-import static com.github.micycle1.grassfire4j.geom.Geom.sub;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
+import org.locationtech.jts.math.Vector2D;
+
 import com.github.micycle1.grassfire4j.model.Model.Event;
 import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 import com.github.micycle1.grassfire4j.model.Model.KineticTriangle;
@@ -35,10 +34,10 @@ public class CollapseEventComputer {
 
 	public static Double vertexCrashTime(KineticVertex org, KineticVertex dst, KineticVertex apx, double now) {
 		double edgeSpeed = org.wfr.weight;
-		Vec2 n = org.ur.w();
-		Vec2 s = apx.velocityAt(now);
-		double distVE = dot(sub(apx.positionAt(now), org.positionAt(now)), n);
-		double sProj = dot(s, n);
+		Vector2D n = org.ur.w();
+		Vector2D s = apx.velocityAt(now);
+		double distVE = apx.positionAt(now).subtract(org.positionAt(now)).dot(n);
+		double sProj = s.dot(n);
 		double denom = edgeSpeed - sProj;
 		if (nearZero(denom)) {
 			return null;
@@ -74,13 +73,13 @@ public class CollapseEventComputer {
 	}
 
 	public static List<Double> areaCollapseTimes(VertexRef o, VertexRef d, VertexRef a, double now) {
-		Vec2 po = o.positionAt(now), pd = d.positionAt(now), pa = a.positionAt(now);
-		Vec2 vo = o.velocityAt(now), vd = d.velocityAt(now), va = a.velocityAt(now);
+		Vector2D po = o.positionAt(now), pd = d.positionAt(now), pa = a.positionAt(now);
+		Vector2D vo = o.velocityAt(now), vd = d.velocityAt(now), va = a.velocityAt(now);
 
-		double dp10x = pd.x() - po.x(), dp10y = pd.y() - po.y();
-		double dp20x = pa.x() - po.x(), dp20y = pa.y() - po.y();
-		double dv10x = vd.x() - vo.x(), dv10y = vd.y() - vo.y();
-		double dv20x = va.x() - vo.x(), dv20y = va.y() - vo.y();
+		double dp10x = pd.getX() - po.getX(), dp10y = pd.getY() - po.getY();
+		double dp20x = pa.getX() - po.getX(), dp20y = pa.getY() - po.getY();
+		double dv10x = vd.getX() - vo.getX(), dv10y = vd.getY() - vo.getY();
+		double dv20x = va.getX() - vo.getX(), dv20y = va.getY() - vo.getY();
 
 		double A2 = dv10x * dv20y - dv10y * dv20x;
 		double A1 = (dp10x * dv20y - dp10y * dv20x) + (dv10x * dp20y - dv10y * dp20x);
@@ -97,12 +96,12 @@ public class CollapseEventComputer {
 	}
 
 	public static Double collapseTimeEdge(VertexRef v1, VertexRef v2, double now) {
-		Vec2 dv = sub(v1.velocityAt(now), v2.velocityAt(now));
-		double denom = dot(dv, dv);
+		Vector2D dv = v1.velocityAt(now).subtract(v2.velocityAt(now));
+		double denom = dv.dot(dv);
 		if (nearZero(denom)) {
 			return null;
 		}
-		double tau = dot(dv, sub(v2.positionAt(now), v1.positionAt(now))) / denom;
+		double tau = dv.dot(v2.positionAt(now).subtract(v1.positionAt(now))) / denom;
 		return tau < -STOP_EPS ? null : now + Math.max(0.0, tau);
 	}
 

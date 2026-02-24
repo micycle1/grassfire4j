@@ -102,8 +102,8 @@ class GrassfireTest {
 		List<SegmentLine> skeletonLines = new ArrayList<>(segments.size());
 
 		for (Segment segment : segments) {
-			PointKey p1 = new PointKey(segment.p1().x(), segment.p1().y());
-			PointKey p2 = new PointKey(segment.p2().x(), segment.p2().y());
+			PointKey p1 = new PointKey(segment.p1().getX(), segment.p1().getY());
+			PointKey p2 = new PointKey(segment.p2().getX(), segment.p2().getY());
 			skeletonEndpoints.add(p1);
 			skeletonEndpoints.add(p2);
 			skeletonLines.add(new SegmentLine(p1, p2));
@@ -227,7 +227,7 @@ class GrassfireTest {
 
 	private static Set<String> canonicalSegments(List<Segment> segments) {
 		return segments.stream()
-				.map(s -> canonicalSegment(s.p1().x(), s.p1().y(), s.p2().x(), s.p2().y()))
+				.map(s -> canonicalSegment(s.p1().getX(), s.p1().getY(), s.p2().getX(), s.p2().getY()))
 				.collect(Collectors.toSet());
 	}
 

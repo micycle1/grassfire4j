@@ -6,10 +6,7 @@ import static com.github.micycle1.grassfire4j.core.Core.cw;
 import static com.github.micycle1.grassfire4j.core.Core.dest;
 import static com.github.micycle1.grassfire4j.core.Core.orig;
 import static com.github.micycle1.grassfire4j.geom.Geom.COS_179_999999;
-import static com.github.micycle1.grassfire4j.geom.Geom.dist;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
-import static com.github.micycle1.grassfire4j.geom.Geom.norm;
-import static com.github.micycle1.grassfire4j.geom.Geom.sub;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -20,11 +17,12 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.function.IntUnaryOperator;
 
+import org.locationtech.jts.math.Vector2D;
+
 import com.github.micycle1.grassfire4j.core.CollapseEventComputer;
 import com.github.micycle1.grassfire4j.core.Core;
 import com.github.micycle1.grassfire4j.geom.Geom;
 import com.github.micycle1.grassfire4j.geom.Geom.Line2;
-import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
 import com.github.micycle1.grassfire4j.model.Model.Event;
 import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
@@ -72,7 +70,7 @@ public class Events {
 		}
 	}
 
-	public static void stopKVertices(List<KineticVertex> V, int step, double now, Skeleton skel, Vec2 pos) {
+	public static void stopKVertices(List<KineticVertex> V, int step, double now, Skeleton skel, Vector2D pos) {
 		SkeletonNode skNode = null;
 		boolean isNew = false;
 		for (var v : V) {
@@ -87,8 +85,8 @@ public class Events {
 		if (skNode == null) {
 			if (pos == null) {
 				double sx=0, sy=0;
-				for (var v : V) { Vec2 p = v.positionAt(now); sx+=p.x(); sy+=p.y(); }
-				pos = new Vec2(sx/V.size(), sy/V.size());
+				for (var v : V) { Vector2D p = v.positionAt(now); sx += p.getX(); sy += p.getY(); }
+				pos = new Vector2D(sx / V.size(), sy / V.size());
 			}
 			skNode = new SkeletonNode(pos, step, null);
 			isNew = true;
@@ -103,31 +101,31 @@ public class Events {
 		KineticVertex kv = new KineticVertex();
 		kv.info = info; kv.startsAt = now; kv.startNode = skNode; kv.internal = internal;
 		Line2 ul = wfl.line, ur = wfr.line;
-		double u1x = ul.w().x(), u1y = ul.w().y(), u2x = ur.w().x(), u2y = ur.w().y();
+		double u1x = ul.w().getX(), u1y = ul.w().getY(), u2x = ur.w().getX(), u2y = ur.w().getY();
 		double d = Math.max(-1.0, Math.min(1.0, u1x * u2x + u1y * u2y));
 		double dirx = wfl.weight * u1x + wfr.weight * u2x, diry = wfl.weight * u1y + wfr.weight * u2y;
 
-		Vec2 bi, pos0;
+		Vector2D bi, pos0;
 		if ((nearZero(dirx) && nearZero(diry)) || nearZero(d + 1.0) || d < COS_179_999999) {
-			bi = new Vec2(0,0); pos0 = skNode.pos;
+			bi = new Vector2D(0, 0); pos0 = skNode.pos;
 		} else {
 			double denom = u1x * u2y - u2x * u1y;
 			if (nearZero(denom)) {
 				double x1 = u1x * ur.b() - u2x * ul.b(), x2 = u1y * ur.b() - u2y * ul.b();
 				if (nearZero(x1) && nearZero(x2)) {
-					bi = new Vec2(0.5 * dirx, 0.5 * diry);
-					pos0 = new Vec2(skNode.pos.x() - bi.x() * now, skNode.pos.y() - bi.y() * now);
-				} else { bi = new Vec2(0,0); pos0 = skNode.pos; }
+					bi = new Vector2D(0.5 * dirx, 0.5 * diry);
+					pos0 = new Vector2D(skNode.pos.getX() - bi.getX() * now, skNode.pos.getY() - bi.getY() * now);
+				} else { bi = new Vector2D(0, 0); pos0 = skNode.pos; }
 			} else {
-				Vec2 p0 = ul.intersectAtTimeWeighted(ur, 0.0, wfl.weight, wfr.weight);
-				Vec2 p1 = ul.intersectAtTimeWeighted(ur, 1.0, wfl.weight, wfr.weight);
-				if (p0 == null || p1 == null) { bi = new Vec2(0,0); pos0 = skNode.pos; }
-				else { pos0 = p0; bi = sub(p1, p0); }
+				Vector2D p0 = ul.intersectAtTimeWeighted(ur, 0.0, wfl.weight, wfr.weight);
+				Vector2D p1 = ul.intersectAtTimeWeighted(ur, 1.0, wfl.weight, wfr.weight);
+				if (p0 == null || p1 == null) { bi = new Vector2D(0, 0); pos0 = skNode.pos; }
+				else { pos0 = p0; bi = p1.subtract(p0); }
 			}
 		}
 
 		kv.velocity = bi;
-		if (bi.x() == 0 && bi.y() == 0) { kv.infFast = true; kv.origin = skNode.pos; } else {
+		if (bi.getX() == 0 && bi.getY() == 0) { kv.infFast = true; kv.origin = skNode.pos; } else {
 			kv.origin = pos0;
 		}
 		kv.ul = ul; kv.ur = ur; kv.wfl = wfl; kv.wfr = wfr;
@@ -225,7 +223,7 @@ public class Events {
 		KineticVertex v1 = (KineticVertex)t.vertices[ccw(e)], v2 = (KineticVertex)t.vertices[cw(e)];
 
 		// Use intersection of wavefront support lines at time now when possible.
-		Vec2 pos = Geom.intersectionAtTimeWeighted(v1.wfl, v2.wfr, now);
+		Vector2D pos = Geom.intersectionAtTimeWeighted(v1.wfl, v2.wfr, now);
 
 		stopKVertices(List.of(v1, v2), step, now, skel, pos);
 		KineticVertex kv = computeNewKVertex(v1.wfl, v2.wfr, now, v1.stopNode, skel.vertices.size()+1, v1.internal || v2.internal);
@@ -368,7 +366,7 @@ public class Events {
 			for (int side=0; side<3; side++) {
 				VertexRef s = firstTri.vertices[ccw(side)];
 				VertexRef e = firstTri.vertices[cw(side)];
-				dists[side] = dist(s.positionAt(now), e.positionAt(now));
+				dists[side] = s.positionAt(now).distance(e.positionAt(now));
 			}
 			double mn = Math.min(dists[0], Math.min(dists[1], dists[2]));
 			int ct = 0, idx = -1;
@@ -399,12 +397,12 @@ public class Events {
 		int leftLegIdx = ccw(left.indexOfVertex(pivot));
 		VertexRef vls = left.vertices[ccw(leftLegIdx)];
 		VertexRef vle = left.vertices[cw(leftLegIdx)];
-		double leftDist = dist(vls.positionAt(now), vle.positionAt(now));
+		double leftDist = vls.positionAt(now).distance(vle.positionAt(now));
 
 		int rightLegIdx = cw(right.indexOfVertex(pivot));
 		VertexRef vrs = right.vertices[ccw(rightLegIdx)];
 		VertexRef vre = right.vertices[cw(rightLegIdx)];
-		double rightDist = dist(vrs.positionAt(now), vre.positionAt(now));
+		double rightDist = vrs.positionAt(now).distance(vre.positionAt(now));
 
 		double mn = Math.min(leftDist, rightDist);
 		boolean leftMin = nearZero(leftDist - mn);
@@ -420,8 +418,8 @@ public class Events {
 					int rIdx = cw(t.indexOfVertex(pivot));
 					VertexRef l1 = t.vertices[ccw(lIdx)], l2 = t.vertices[cw(lIdx)];
 					VertexRef r1 = t.vertices[ccw(rIdx)], r2 = t.vertices[cw(rIdx)];
-					double ld = dist(l1.positionAt(now), l2.positionAt(now));
-					double rd = dist(r1.positionAt(now), r2.positionAt(now));
+					double ld = l1.positionAt(now).distance(l2.positionAt(now));
+					double rd = r1.positionAt(now).distance(r2.positionAt(now));
 					double mm = Math.min(ld, rd);
 					int u = 0;
 					if (nearZero(ld - mm)) {
@@ -583,8 +581,8 @@ public class Events {
 		KineticVertex v1 = (KineticVertex) t.vertices[ccw(e)];
 		KineticVertex v2 = (KineticVertex) t.vertices[cw(e)];
 
-		double m1 = norm(v1.velocityAt(now));
-		double m2 = norm(v2.velocityAt(now));
+		double m1 = v1.velocityAt(now).length();
+		double m2 = v2.velocityAt(now).length();
 
 		if (m2 < m1) {
 			stopKVertices(List.of(v2), step, now, skel, null);

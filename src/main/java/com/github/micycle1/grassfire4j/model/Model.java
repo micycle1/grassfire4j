@@ -6,8 +6,10 @@ import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.math.Vector2D;
+
 import com.github.micycle1.grassfire4j.geom.Geom.Line2;
-import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
 
 /**
@@ -19,27 +21,27 @@ import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
 public final class Model {
 
 	public static class SkeletonNode {
-		public final Vec2 pos;
+		public final Vector2D pos;
 		public final int step;
 		public final Integer info;
-		public SkeletonNode(Vec2 pos, int step, Integer info) { this.pos = pos; this.step = step; this.info = info; }
+		public SkeletonNode(Vector2D pos, int step, Integer info) { this.pos = pos; this.step = step; this.info = info; }
 	}
 
 	public interface VertexRef {
-		Vec2 positionAt(double time);
-		Vec2 velocityAt(double time);
+		Vector2D positionAt(double time);
+		Vector2D velocityAt(double time);
 		default double distance2At(VertexRef other, double time) {
 			return dist2(positionAt(time), other.positionAt(time));
 		}
 	}
 
 	public static class InfiniteVertex implements VertexRef {
-		public Vec2 origin;
+		public Vector2D origin;
 		public boolean internal = false;
 		public int info = 0;
-		public InfiniteVertex(Vec2 origin) { this.origin = origin; }
-		@Override public Vec2 positionAt(double time) { return origin; }
-		@Override public Vec2 velocityAt(double time) { return new Vec2(0, 0); }
+		public InfiniteVertex(Vector2D origin) { this.origin = origin; }
+		@Override public Vector2D positionAt(double time) { return origin; }
+		@Override public Vector2D velocityAt(double time) { return new Vector2D(0, 0); }
 	}
 
 	public static class KineticVertex implements VertexRef {
@@ -49,7 +51,7 @@ public final class Model {
 			STRAIGHT
 		}
 
-		public Vec2 origin, velocity;
+		public Vector2D origin, velocity;
 		public Double startsAt, stopsAt;
 		public SkeletonNode startNode, stopNode;
 		public Line2 ul, ur;
@@ -64,19 +66,19 @@ public final class Model {
 
 		public boolean isStopped() { return stopNode != null; }
 
-		@Override public Vec2 positionAt(double time) {
+		@Override public Vector2D positionAt(double time) {
 			if (infFast) {
 				return startNode.pos;
 			}
 			if (stopsAt != null && stopNode != null && time >= stopsAt - STOP_EPS) {
 				return stopNode.pos;
 			}
-			return new Vec2(origin.x() + time * velocity.x(), origin.y() + time * velocity.y());
+			return new Vector2D(origin.getX() + time * velocity.getX(), origin.getY() + time * velocity.getY());
 		}
 
-		@Override public Vec2 velocityAt(double time) {
+		@Override public Vector2D velocityAt(double time) {
 			if (infFast || (stopsAt != null && time >= stopsAt - STOP_EPS)) {
-				return new Vec2(0, 0);
+				return new Vector2D(0, 0);
 			}
 			return velocity;
 		}
@@ -189,7 +191,7 @@ public final class Model {
 		public List<KineticVertex> vertices = new ArrayList<>();
 		public List<KineticTriangle> triangles = new ArrayList<>();
 
-		public record Segment(Vec2 p1, Vec2 p2, Integer info1, Integer info2) {}
+		public record Segment(Coordinate p1, Coordinate p2, Integer info1, Integer info2) {}
 		public List<Segment> segments() {
 			List<Segment> segs = new ArrayList<>();
 			for (var v : vertices) {
@@ -197,9 +199,9 @@ public final class Model {
 					if (v.startNode == v.stopNode) {
 						continue;
 					}
-					segs.add(new Segment(v.startNode.pos, v.stopNode.pos, v.startNode.info, v.stopNode.info));
+					segs.add(new Segment(v.startNode.pos.toCoordinate(), v.stopNode.pos.toCoordinate(), v.startNode.info, v.stopNode.info));
 				} else {
-					segs.add(new Segment(v.startNode.pos, v.positionAt(1000.0), v.startNode.info, null));
+					segs.add(new Segment(v.startNode.pos.toCoordinate(), v.positionAt(1000.0).toCoordinate(), v.startNode.info, null));
 				}
 			}
 			return segs;
