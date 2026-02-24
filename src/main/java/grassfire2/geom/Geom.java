@@ -21,7 +21,6 @@ public final class Geom {
 	public static double dist2(Vec2 start, Vec2 end) { return norm2(sub(end, start)); }
 
 	public static boolean nearZero(double val) {
-		// Python near_zero(): abs_tol=1e-10 dominates for comparison to 0.
 		return Math.abs(val) <= 1e-10;
 	}
 

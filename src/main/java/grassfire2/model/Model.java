@@ -137,15 +137,21 @@ public final class Model {
 	}
 
 	public static class Event implements Comparable<Event> {
+		public enum EventType {
+			EDGE,
+			FLIP,
+			SPLIT
+		}
+
 		public final double time;
 		public final KineticTriangle tri;
 		public final List<Integer> side;
-		public final String tp;
+		public final EventType tp;
 		public final int triangleTp;
 		public boolean valid = true;
 		public long counter;
 
-		public Event(double time, KineticTriangle tri, List<Integer> side, String tp, int triangleTp) {
+		public Event(double time, KineticTriangle tri, List<Integer> side, EventType tp, int triangleTp) {
 			this.time = time; this.tri = tri; this.side = side; this.tp = tp; this.triangleTp = triangleTp;
 		}
 

@@ -15,6 +15,7 @@ import java.util.List;
 
 import grassfire2.geom.Geom.Vec2;
 import grassfire2.model.Model.Event;
+import grassfire2.model.Model.Event.EventType;
 import grassfire2.model.Model.KineticTriangle;
 import grassfire2.model.Model.KineticVertex;
 import grassfire2.model.Model.VertexRef;
@@ -129,9 +130,9 @@ public class CollapseEventComputer {
 		return new double[]{ d.distance2At(a, t), a.distance2At(o, t), o.distance2At(d, t) };
 	}
 
-	private static Event edgeEvt(KineticTriangle t, double time, List<Integer> sides) { return new Event(time, t, sides, "edge", t.getType()); }
-	private static Event flipEvt(KineticTriangle t, double time, int side) { return new Event(time, t, List.of(side), "flip", t.getType()); }
-	private static Event splitEvt(KineticTriangle t, double time, int side) { return new Event(time, t, List.of(side), "split", t.getType()); }
+	private static Event edgeEvt(KineticTriangle t, double time, List<Integer> sides) { return new Event(time, t, sides, EventType.EDGE, t.getType()); }
+	private static Event flipEvt(KineticTriangle t, double time, int side) { return new Event(time, t, List.of(side), EventType.FLIP, t.getType()); }
+	private static Event splitEvt(KineticTriangle t, double time, int side) { return new Event(time, t, List.of(side), EventType.SPLIT, t.getType()); }
 
 	private static Event finite0(KineticTriangle tri, double now, boolean strictGt) {
 		KineticVertex o = (KineticVertex)tri.vertices[0], d = (KineticVertex)tri.vertices[1], a = (KineticVertex)tri.vertices[2];

@@ -27,6 +27,7 @@ import grassfire2.geom.Geom.Line2;
 import grassfire2.geom.Geom.Vec2;
 import grassfire2.geom.Geom.WaveFront;
 import grassfire2.model.Model.Event;
+import grassfire2.model.Model.Event.EventType;
 import grassfire2.model.Model.KineticTriangle;
 import grassfire2.model.Model.KineticVertex;
 import grassfire2.model.Model.Skeleton;
@@ -153,7 +154,7 @@ public class Events {
 		if (tri.event != null) { queue.discard(tri.event); imm.remove(tri.event); }
 		Event e = CollapseEventComputer.computeNewEdgeCollapse(tri, now);
 		if (tri.getType() == 3) {
-			e = new Event(now, tri, List.of(0,1,2), "edge", 3);
+			e = new Event(now, tri, List.of(0,1,2), EventType.EDGE, 3);
 		}
 		tri.event = e;
 		imm.addLast(e);
@@ -615,7 +616,7 @@ public class Events {
 				continue;
 			}
 
-			if (evt.tp.equals("edge")) {
+			if (evt.tp == EventType.EDGE) {
 				if (evt.side.size() == 3) {
 					stopKVertices(Arrays.asList((KineticVertex)evt.tri.vertices[0], (KineticVertex)evt.tri.vertices[1], (KineticVertex)evt.tri.vertices[2]), step, now, skel, null);
 					for (var n : evt.tri.neighbours) {
@@ -632,9 +633,9 @@ public class Events {
 				} else {
 					handleEdge(evt, step, skel, q, imm);
 				}
-			} else if (evt.tp.equals("flip")) {
+			} else if (evt.tp == EventType.FLIP) {
 				handleFlip(evt, now, q, imm);
-			} else if (evt.tp.equals("split")) {
+			} else if (evt.tp == EventType.SPLIT) {
 				handleSplit(evt, step, skel, q, imm);
 			} else {
 				throw new RuntimeException("Unknown event type: " + evt.tp);
