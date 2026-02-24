@@ -428,7 +428,7 @@ public final class Model {
 					continue;
 				}
 				Polygon face = factory.createPolygon(coords);
-				if (!face.isValid() || face.getArea() <= FACE_RING_AREA_EPS) {
+				if (face.getArea() <= FACE_RING_AREA_EPS) {
 					continue;
 				}
 				faces.add(face);

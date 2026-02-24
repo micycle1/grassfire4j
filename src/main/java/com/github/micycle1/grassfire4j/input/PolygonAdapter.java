@@ -28,9 +28,9 @@ import com.github.micycle1.grassfire4j.input.InputMeshBuilder.EdgeRef;
 /**
  * Adapter that converts JTS {@link Polygon} input into {@link InputMesh}.
  * <p>
- * This is one concrete adapter for the solver boundary; additional adapters
- * for other input formats can be introduced by producing the same
- * {@link InputMesh} representation.
+ * This is one concrete adapter for the solver boundary; additional adapters for
+ * other input formats can be introduced by producing the same {@link InputMesh}
+ * representation.
  */
 public class PolygonAdapter implements Adapter<Polygon> {
 
@@ -60,9 +60,9 @@ public class PolygonAdapter implements Adapter<Polygon> {
 	 * Within each ring, each segment between consecutive coordinates contributes
 	 * one weight entry (the closing duplicate coordinate is excluded).
 	 *
-	 * @param polygon input polygon
+	 * @param polygon     input polygon
 	 * @param edgeWeights optional per-edge weights; when non-null, size must equal
-	 *        total boundary edge count across shell and holes
+	 *                    total boundary edge count across shell and holes
 	 * @return triangulated solver input mesh
 	 */
 	public InputMesh toMesh(Polygon polygon, List<Double> edgeWeights) {
@@ -73,8 +73,7 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		List<Edge> boundaryEdges = getBoundaryEdgesInOrder(polygon);
 		List<Vector2D> boundaryVertices = getBoundaryVerticesInOrder(polygon);
 		if (edgeWeights != null && edgeWeights.size() != boundaryEdges.size()) {
-			throw new IllegalArgumentException(
-					"edgeWeights size (" + edgeWeights.size() + ") must equal boundary edge count (" + boundaryEdges.size() + ")");
+			throw new IllegalArgumentException("edgeWeights size (" + edgeWeights.size() + ") must equal boundary edge count (" + boundaryEdges.size() + ")");
 		}
 
 		Map<Vector2D, Integer> boundaryVertexInfoMap = new HashMap<>();
@@ -150,7 +149,7 @@ public class PolygonAdapter implements Adapter<Polygon> {
 				Constraint constraint = new Constraint(weight, i);
 				Constraint existing = constrainedIndexEdgeWeights.putIfAbsent(edgeRef, constraint);
 				if (existing != null && (Double.compare(existing.weight(), weight) != 0 || existing.edgeId() != i)) {
-					throw new IllegalArgumentException("Conflicting constraints mapped to the same boundary edge");
+					throw new IllegalArgumentException("Conflicting constraints mapped to the same boundary edge. Polygon might be invalid?");
 				}
 			}
 		}
