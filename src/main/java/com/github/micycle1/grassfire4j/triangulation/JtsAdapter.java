@@ -11,10 +11,8 @@ import java.util.Set;
 
 import org.locationtech.jts.algorithm.Orientation;
 import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Polygon;
-import org.locationtech.jts.triangulate.polygon.ConstrainedDelaunayTriangulator;
 import org.tinfour.common.IConstraint;
 import org.tinfour.common.PolygonConstraint;
 import org.tinfour.common.Vertex;
@@ -62,37 +60,7 @@ public class JtsAdapter {
 		}
 	}
 
-	public static InputMesh fromJtsPolygon(Polygon polygon) {
-		Geometry triGeom = ConstrainedDelaunayTriangulator.triangulate(polygon);
-		if (triGeom.isEmpty()) {
-			return new InputMesh(List.of(), List.of());
-		}
-
-		Set<Edge> constrainedEdges = getConstrainedEdges(polygon);
-
-		Map<Vec2, Integer> vIndex = new HashMap<>();
-		List<InputVertex> vertices = new ArrayList<>();
-		List<int[]> triVertices = new ArrayList<>();
-
-		for (int i = 0; i < triGeom.getNumGeometries(); i++) {
-			Polygon poly = (Polygon) triGeom.getGeometryN(i);
-			Coordinate[] coords = poly.getExteriorRing().getCoordinates();
-			Vec2[] triPts = { new Vec2(coords[0].x, coords[0].y), new Vec2(coords[2].x, coords[2].y), new Vec2(coords[1].x, coords[1].y) };
-
-			int[] vIdx = new int[3];
-			for (int j = 0; j < 3; j++) {
-				vIdx[j] = vIndex.computeIfAbsent(triPts[j], pt -> {
-					vertices.add(new InputVertex(pt.x(), pt.y(), true, null));
-					return vertices.size() - 1;
-				});
-			}
-			triVertices.add(vIdx);
-		}
-
-		return buildInputMesh(vertices, triVertices, constrainedEdges);
-	}
-
-	public static InputMesh fromJtsPolygonTinfour(Polygon polygon) {
+	public static InputMesh fromPolygon(Polygon polygon) {
 		if (polygon.isEmpty()) {
 			return new InputMesh(List.of(), List.of());
 		}

@@ -45,7 +45,7 @@ class GrassfireApiTest {
 				c(0.0, 0.0)));
 
 		Polygon polygon = toPolygon(rings);
-		var skeleton = GrassfireApi.computeSkeleton(polygon);
+		var skeleton = Grassfire.computeSkeleton(polygon);
 		assertEquals(8, skeleton.segments().size(), "Unexpected internal segment count");
 	}
 
@@ -68,7 +68,7 @@ class GrassfireApiTest {
 		}
 
 		Polygon polygon = toPolygon(rings);
-		var skeleton = GrassfireApi.computeSkeleton(polygon);
+		var skeleton = Grassfire.computeSkeleton(polygon);
 		List<Segment> segments = skeleton.segments();
 
 		Integer expected = EXPECTED_SEGMENTS.get(csvFile.getFileName().toString());

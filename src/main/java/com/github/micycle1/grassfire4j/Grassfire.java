@@ -9,25 +9,21 @@ import com.github.micycle1.grassfire4j.model.Model.Skeleton;
 import com.github.micycle1.grassfire4j.triangulation.JtsAdapter;
 import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputMesh;
 
-public class GrassfireApi {
+public class Grassfire {
 
 	public static Skeleton computeSkeleton(Polygon polygon) {
-		// 1. Triangulate Polygon into Internal Mesh
-		var mesh = JtsAdapter.fromJtsPolygon(polygon);
+		var mesh = JtsAdapter.fromPolygon(polygon);
 		return computeSkeleton(mesh);
 	}
 
 	public static Skeleton computeSkeletonTinfour(Polygon polygon) {
-		// 1. Triangulate Polygon into Internal Mesh
-		var mesh = JtsAdapter.fromJtsPolygonTinfour(polygon);
+		var mesh = JtsAdapter.fromPolygon(polygon);
 		return computeSkeleton(mesh);
 	}
 
 	public static Skeleton computeSkeleton(InputMesh mesh) {
-		// 2. Init Kinetic Skeleton Data Structure
 		Skeleton skel = Core.initSkeleton(mesh);
 
-		// 3. Initialize Event Queue
 		Events.EventQueue queue = new Events.EventQueue();
 		for (var tri : skel.triangles) {
 			var e = CollapseEventComputer.compute(tri, 0.0, true);
@@ -36,7 +32,6 @@ public class GrassfireApi {
 			}
 		}
 
-		// 4. Run Physics Loop
 		Events.eventLoop(queue, skel);
 
 		return skel;
