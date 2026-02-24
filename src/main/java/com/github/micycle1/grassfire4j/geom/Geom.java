@@ -1,8 +1,8 @@
 package com.github.micycle1.grassfire4j.geom;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.Arrays;
+
+
 
 import org.locationtech.jts.math.Vector2D;
 
@@ -93,31 +93,34 @@ public final class Geom {
 		return left.line.intersectAtTimeWeighted(right.line, t, left.weight, right.weight);
 	}
 
-	public static List<Double> getUniqueTimes(List<Double> times) {
-		if (times == null || times.isEmpty()) {
-			return new ArrayList<>();
+	public static double[] getUniqueTimes(double[] times) {
+		if (times == null || times.length == 0) {
+			return new double[0];
 		}
-		List<Double> sorted = new ArrayList<>();
-		for (Double d : times) {
-			if (d != null) {
-				sorted.add(d);
+		double[] sorted = new double[times.length];
+		int n = 0;
+		for (double d : times) {
+			if (!Double.isNaN(d)) {
+				sorted[n++] = d;
 			}
 		}
-		if (sorted.isEmpty()) {
-			return new ArrayList<>();
+		if (n == 0) {
+			return new double[0];
 		}
-		Collections.sort(sorted);
-		List<Double> out = new ArrayList<>();
-		double first = sorted.get(0);
-		out.add(first);
-		for (double val : sorted) {
+		Arrays.sort(sorted, 0, n);
+		double[] out = new double[n];
+		int m = 0;
+		double first = sorted[0];
+		out[m++] = first;
+		for (int i = 1; i < n; i++) {
+			double val = sorted[i];
 			double diff = Math.abs(val - first);
 			if (diff <= Math.abs(0.0 * (first + val) * 0.5) || diff <= 1e-7) {
 				continue;
 			}
-			out.add(val);
+			out[m++] = val;
 			first = val;
 		}
-		return out;
+		return m == n ? out : Arrays.copyOf(out, m);
 	}
 }
