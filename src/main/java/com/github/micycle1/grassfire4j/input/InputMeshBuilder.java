@@ -60,7 +60,20 @@ public final class InputMeshBuilder {
 	}
 
 	public static InputMesh build(List<InputVertex> vertices, List<int[]> triangleVertices, Map<EdgeRef, Double> edgeWeights, boolean isInternal) {
+		Map<EdgeRef, Constraint> constraints = new HashMap<>();
 		Map<EdgeRef, Double> weights = edgeWeights == null ? Collections.emptyMap() : edgeWeights;
+		for (Map.Entry<EdgeRef, Double> entry : weights.entrySet()) {
+			constraints.put(entry.getKey(), new Constraint(entry.getValue()));
+		}
+		return buildWithConstraints(vertices, triangleVertices, constraints, isInternal);
+	}
+
+	public static InputMesh buildWithConstraints(List<InputVertex> vertices, List<int[]> triangleVertices, Map<EdgeRef, Constraint> edgeConstraints) {
+		return buildWithConstraints(vertices, triangleVertices, edgeConstraints, true);
+	}
+
+	public static InputMesh buildWithConstraints(List<InputVertex> vertices, List<int[]> triangleVertices, Map<EdgeRef, Constraint> edgeConstraints, boolean isInternal) {
+		Map<EdgeRef, Constraint> constraints = edgeConstraints == null ? Collections.emptyMap() : edgeConstraints;
 		Map<EdgeRef, List<SideRef>> edgeToSides = new HashMap<>();
 		for (int tIdx = 0; tIdx < triangleVertices.size(); tIdx++) {
 			int[] tv = triangleVertices.get(tIdx);
@@ -92,10 +105,10 @@ public final class InputMeshBuilder {
 			for (int side = 0; side < 3; side++) {
 				int a = tv[(side + 1) % 3];
 				int b = tv[(side + 2) % 3];
-				Double weight = weights.get(new EdgeRef(a, b));
-				if (weight != null) {
-					validateWeight(weight);
-					tc[side] = new Constraint(weight);
+				Constraint constraint = constraints.get(new EdgeRef(a, b));
+				if (constraint != null) {
+					validateWeight(constraint.weight());
+					tc[side] = constraint;
 				}
 			}
 			triangles.add(new InputTriangle(tv, triN[tIdx], tc, isInternal));

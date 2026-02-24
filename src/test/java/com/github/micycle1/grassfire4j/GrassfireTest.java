@@ -95,6 +95,20 @@ class GrassfireTest {
 		assertEquals(Integer.valueOf(3), findVertexInfo(mesh, 0.0, 10.0));
 	}
 
+	@Test
+	void polygonFacesPreserveInputHole() {
+		List<List<Coordinate>> rings = List.of(
+				List.of(c(0.0, 0.0), c(12.0, 0.0), c(12.0, 12.0), c(0.0, 12.0), c(0.0, 0.0)),
+				List.of(c(4.0, 4.0), c(8.0, 4.0), c(8.0, 8.0), c(4.0, 8.0), c(4.0, 4.0)));
+
+		Polygon polygon = toPolygon(rings);
+		var skeleton = Grassfire.computeSkeleton(polygon);
+		var faces = skeleton.asPolygonFaces(polygon);
+
+		assertEquals(polygon.getArea(), faces.getArea(), 1e-9, "Faces area should match polygon area (holes preserved)");
+		assertFalse(faces.covers(GEOMETRY_FACTORY.createPoint(c(6.0, 6.0))), "Hole interior should remain empty");
+	}
+
 	private void runSkeletonIntegrity(Path csvFile) throws IOException {
 		List<List<Coordinate>> rings = readCsvPolygon(csvFile);
 		if (rings.isEmpty()) {

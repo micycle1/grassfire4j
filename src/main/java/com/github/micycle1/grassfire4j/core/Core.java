@@ -181,7 +181,8 @@ public final class Core {
 				if (t.c[i] != null) {
 					InputVertex start = mesh.vertices.get(t.v[ccw(i)]);
 					InputVertex end = mesh.vertices.get(t.v[cw(i)]);
-					k.wavefrontSupportLines[i] = new WaveFront(new Vector2D(start.x, start.y), new Vector2D(end.x, end.y), null, t.c[i].weight(), null);
+					Object wavefrontData = t.c[i].edgeId() >= 0 ? Integer.valueOf(t.c[i].edgeId()) : null;
+					k.wavefrontSupportLines[i] = new WaveFront(new Vector2D(start.x, start.y), new Vector2D(end.x, end.y), null, t.c[i].weight(), wavefrontData);
 				}
 			}
 			for (int i = 0; i < 3; i++) {

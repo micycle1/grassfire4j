@@ -12,7 +12,17 @@ import java.util.List;
  */
 public class InputMesh {
 
-	public record Constraint(double weight) {}
+	/**
+	 * Per-edge constraint metadata.
+	 *
+	 * @param weight wavefront speed weight for the constrained edge
+	 * @param edgeId optional stable boundary edge identifier ({@code -1} if absent)
+	 */
+	public record Constraint(double weight, int edgeId) {
+		public Constraint(double weight) {
+			this(weight, -1);
+		}
+	}
 
 	public static class InputVertex {
 		public final double x, y;

@@ -21,6 +21,7 @@ import org.tinfour.standard.IncrementalTin;
 import org.tinfour.utils.HilbertSort;
 import org.tinfour.utils.TriangleCollector;
 
+import com.github.micycle1.grassfire4j.input.InputMesh.Constraint;
 import com.github.micycle1.grassfire4j.input.InputMesh.InputVertex;
 import com.github.micycle1.grassfire4j.input.InputMeshBuilder.EdgeRef;
 
@@ -138,7 +139,7 @@ public class PolygonAdapter implements Adapter<Polygon> {
 			triVertices.add(vIdx);
 		});
 
-		Map<EdgeRef, Double> constrainedIndexEdgeWeights = new LinkedHashMap<>();
+		Map<EdgeRef, Constraint> constrainedIndexEdgeWeights = new LinkedHashMap<>();
 		for (int i = 0; i < boundaryEdges.size(); i++) {
 			Edge edge = boundaryEdges.get(i);
 			Integer a = vIndex.get(edge.a());
@@ -146,14 +147,15 @@ public class PolygonAdapter implements Adapter<Polygon> {
 			if (a != null && b != null) {
 				EdgeRef edgeRef = new EdgeRef(a, b);
 				double weight = edgeWeights == null ? 1.0 : edgeWeights.get(i);
-				Double existing = constrainedIndexEdgeWeights.putIfAbsent(edgeRef, weight);
-				if (existing != null && Double.compare(existing, weight) != 0) {
-					throw new IllegalArgumentException("Conflicting weights mapped to the same boundary edge");
+				Constraint constraint = new Constraint(weight, i);
+				Constraint existing = constrainedIndexEdgeWeights.putIfAbsent(edgeRef, constraint);
+				if (existing != null && (Double.compare(existing.weight(), weight) != 0 || existing.edgeId() != i)) {
+					throw new IllegalArgumentException("Conflicting constraints mapped to the same boundary edge");
 				}
 			}
 		}
 
-		return InputMeshBuilder.build(vertices, triVertices, constrainedIndexEdgeWeights);
+		return InputMeshBuilder.buildWithConstraints(vertices, triVertices, constrainedIndexEdgeWeights);
 	}
 
 	public static InputMesh fromPolygon(Polygon polygon) {
