@@ -2,7 +2,6 @@ package com.github.micycle1.grassfire4j.model;
 
 import static com.github.micycle1.grassfire4j.geom.Geom.STOP_EPS;
 import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
-import static java.lang.Math.hypot;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -11,10 +10,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import org.locationtech.jts.algorithm.Orientation;
+import org.locationtech.jts.algorithm.locate.IndexedPointInAreaLocator;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.geom.Location;
 import org.locationtech.jts.geom.MultiLineString;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.math.Vector2D;
@@ -35,12 +37,19 @@ public final class Model {
 		public final Vector2D pos;
 		public final int step;
 		public final Integer info;
-		public SkeletonNode(Vector2D pos, int step, Integer info) { this.pos = pos; this.step = step; this.info = info; }
+
+		public SkeletonNode(Vector2D pos, int step, Integer info) {
+			this.pos = pos;
+			this.step = step;
+			this.info = info;
+		}
 	}
 
 	public interface VertexRef {
 		Vector2D positionAt(double time);
+
 		Vector2D velocityAt(double time);
+
 		default double distance2At(VertexRef other, double time) {
 			return dist2(positionAt(time), other.positionAt(time));
 		}
@@ -50,16 +59,25 @@ public final class Model {
 		public Vector2D origin;
 		public boolean internal = false;
 		public int info = 0;
-		public InfiniteVertex(Vector2D origin) { this.origin = origin; }
-		@Override public Vector2D positionAt(double time) { return origin; }
-		@Override public Vector2D velocityAt(double time) { return new Vector2D(0, 0); }
+
+		public InfiniteVertex(Vector2D origin) {
+			this.origin = origin;
+		}
+
+		@Override
+		public Vector2D positionAt(double time) {
+			return origin;
+		}
+
+		@Override
+		public Vector2D velocityAt(double time) {
+			return new Vector2D(0, 0);
+		}
 	}
 
 	public static class KineticVertex implements VertexRef {
 		public enum Turn {
-			RIGHT_REFLEX,
-			LEFT_CONVEX,
-			STRAIGHT
+			RIGHT_REFLEX, LEFT_CONVEX, STRAIGHT
 		}
 
 		public Vector2D origin, velocity;
@@ -71,13 +89,18 @@ public final class Model {
 		public boolean infFast = false, internal = false;
 		public Turn turn;
 
-		public record HistEntry(double start, Double stop, VertexRef ref) {}
+		public record HistEntry(double start, Double stop, VertexRef ref) {
+		}
+
 		public final List<HistEntry> leftHist = new ArrayList<>();
 		public final List<HistEntry> rightHist = new ArrayList<>();
 
-		public boolean isStopped() { return stopNode != null; }
+		public boolean isStopped() {
+			return stopNode != null;
+		}
 
-		@Override public Vector2D positionAt(double time) {
+		@Override
+		public Vector2D positionAt(double time) {
 			if (infFast) {
 				return startNode.pos;
 			}
@@ -87,28 +110,34 @@ public final class Model {
 			return new Vector2D(origin.getX() + time * velocity.getX(), origin.getY() + time * velocity.getY());
 		}
 
-		@Override public Vector2D velocityAt(double time) {
+		@Override
+		public Vector2D velocityAt(double time) {
 			if (infFast || (stopsAt != null && time >= stopsAt - STOP_EPS)) {
 				return new Vector2D(0, 0);
 			}
 			return velocity;
 		}
 
-		public VertexRef getLeft() { return leftHist.isEmpty() ? null : leftHist.get(leftHist.size()-1).ref(); }
-		public VertexRef getRight() { return rightHist.isEmpty() ? null : rightHist.get(rightHist.size()-1).ref(); }
+		public VertexRef getLeft() {
+			return leftHist.isEmpty() ? null : leftHist.get(leftHist.size() - 1).ref();
+		}
+
+		public VertexRef getRight() {
+			return rightHist.isEmpty() ? null : rightHist.get(rightHist.size() - 1).ref();
+		}
 
 		public void setLeft(VertexRef ref, double time) {
 			if (!leftHist.isEmpty()) {
-				var last = leftHist.get(leftHist.size()-1);
-				leftHist.set(leftHist.size()-1, new HistEntry(last.start(), time, last.ref()));
+				var last = leftHist.get(leftHist.size() - 1);
+				leftHist.set(leftHist.size() - 1, new HistEntry(last.start(), time, last.ref()));
 			}
 			leftHist.add(new HistEntry(time, null, ref));
 		}
 
 		public void setRight(VertexRef ref, double time) {
 			if (!rightHist.isEmpty()) {
-				var last = rightHist.get(rightHist.size()-1);
-				rightHist.set(rightHist.size()-1, new HistEntry(last.start(), time, last.ref()));
+				var last = rightHist.get(rightHist.size() - 1);
+				rightHist.set(rightHist.size() - 1, new HistEntry(last.start(), time, last.ref()));
 			}
 			rightHist.add(new HistEntry(time, null, ref));
 		}
@@ -163,9 +192,7 @@ public final class Model {
 
 	public static class Event implements Comparable<Event> {
 		public enum EventType {
-			EDGE,
-			FLIP,
-			SPLIT
+			EDGE, FLIP, SPLIT
 		}
 
 		public final double time;
@@ -177,10 +204,16 @@ public final class Model {
 		public long counter;
 
 		public Event(double time, KineticTriangle tri, int sideMask, EventType tp, int triangleTp) {
-			this.time = time; this.tri = tri; this.sideMask = sideMask; this.tp = tp; this.triangleTp = triangleTp;
+			this.time = time;
+			this.tri = tri;
+			this.sideMask = sideMask;
+			this.tp = tp;
+			this.triangleTp = triangleTp;
 		}
 
-		public int sideCount() { return Integer.bitCount(sideMask); }
+		public int sideCount() {
+			return Integer.bitCount(sideMask);
+		}
 
 		public int singleSide() {
 			if (sideCount() != 1) {
@@ -189,7 +222,8 @@ public final class Model {
 			return Integer.numberOfTrailingZeros(sideMask);
 		}
 
-		@Override public int compareTo(Event o) {
+		@Override
+		public int compareTo(Event o) {
 			int cmp = Double.compare(this.time, o.time);
 			if (cmp != 0) {
 				return cmp;
@@ -216,7 +250,8 @@ public final class Model {
 		private static final int OUTSIDE_FACE = -1;
 		private static final double FACE_RING_AREA_EPS = 1e-12;
 
-		private static record CoordKey(double x, double y) {}
+		private static record CoordKey(double x, double y) {
+		}
 
 		private static final class HalfEdge {
 			final int from;
@@ -239,7 +274,8 @@ public final class Model {
 		public List<KineticVertex> vertices = new ArrayList<>();
 		public List<KineticTriangle> triangles = new ArrayList<>();
 
-		public record Segment(Coordinate p1, Coordinate p2, Integer info1, Integer info2) {}
+		public record Segment(Coordinate p1, Coordinate p2, Integer info1, Integer info2) {
+		}
 
 		/**
 		 * Returns all skeleton segments as endpoint pairs.
@@ -294,11 +330,11 @@ public final class Model {
 		 * Polygonizes the partition induced by the input polygon boundary and skeleton
 		 * linework.
 		 * <p>
-		 * The caller should pass the same polygon used to compute this skeleton.
-		 * Faces are derived from a half-edge walk over boundary edges and skeleton arcs
-		 * labeled by source boundary edge IDs.
-		 * If boundary-edge labels are unavailable (e.g. custom adapters not providing
-		 * IDs), this method falls back to polygonizer-based extraction.
+		 * The caller should pass the same polygon used to compute this skeleton. Faces
+		 * are derived from a half-edge walk over boundary edges and skeleton arcs
+		 * labeled by source boundary edge IDs. If boundary-edge labels are unavailable
+		 * (e.g. custom adapters not providing IDs), this method falls back to
+		 * polygonizer-based extraction.
 		 *
 		 * @param polygon source polygon used for skeleton construction
 		 * @return polygonized face geometry
@@ -320,9 +356,10 @@ public final class Model {
 			Map<CoordKey, Integer> nodeLookup = new HashMap<>();
 
 			int boundaryEdgeId = 0;
-			boundaryEdgeId = addRingBoundaryEdges(polygon, polygon.getExteriorRing().getCoordinates(), boundaryEdgeId, halfEdges, outgoing, nodes, nodeLookup);
+			boundaryEdgeId = addRingBoundaryEdges(polygon.getExteriorRing().getCoordinates(), false, boundaryEdgeId, halfEdges, outgoing, nodes, nodeLookup);
 			for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
-				boundaryEdgeId = addRingBoundaryEdges(polygon, polygon.getInteriorRingN(i).getCoordinates(), boundaryEdgeId, halfEdges, outgoing, nodes, nodeLookup);
+				boundaryEdgeId = addRingBoundaryEdges(polygon.getInteriorRingN(i).getCoordinates(), true, boundaryEdgeId, halfEdges, outgoing, nodes,
+						nodeLookup);
 			}
 
 			boolean hasLabeledSkeletonEdges = false;
@@ -394,9 +431,8 @@ public final class Model {
 				if (!face.isValid() || face.getArea() <= FACE_RING_AREA_EPS) {
 					continue;
 				}
-				if (polygon.covers(face.getInteriorPoint())) {
-					faces.add(face);
-				}
+				faces.add(face);
+
 			}
 			if (faces.isEmpty()) {
 				return null;
@@ -404,25 +440,19 @@ public final class Model {
 			return factory.buildGeometry(faces);
 		}
 
-		private static int addRingBoundaryEdges(
-				Polygon polygon,
-				Coordinate[] coords,
-				int edgeIdStart,
-				List<HalfEdge> halfEdges,
-				List<List<Integer>> outgoing,
-				List<Coordinate> nodes,
-				Map<CoordKey, Integer> nodeLookup
-		) {
+		private static int addRingBoundaryEdges(Coordinate[] coords, boolean isHole, int edgeIdStart, List<HalfEdge> halfEdges, List<List<Integer>> outgoing,
+				List<Coordinate> nodes, Map<CoordKey, Integer> nodeLookup) {
+			boolean ringInteriorOnLeft = Orientation.isCCW(coords);
+			boolean polygonInteriorOnLeft = isHole ? !ringInteriorOnLeft : ringInteriorOnLeft;
+
 			int edgeId = edgeIdStart;
 			for (int i = 0; i + 1 < coords.length; i++) {
-				Coordinate a = coords[i];
-				Coordinate b = coords[i + 1];
-				if (a.equals2D(b)) {
+				Coordinate a = coords[i], b = coords[i + 1];
+				if (a.equals2D(b))
 					continue;
-				}
-				boolean interiorOnLeft = isLeftSideInsidePolygon(polygon, a, b);
-				Integer leftFace = interiorOnLeft ? Integer.valueOf(edgeId) : null;
-				Integer rightFace = interiorOnLeft ? null : Integer.valueOf(edgeId);
+
+				Integer leftFace = polygonInteriorOnLeft ? edgeId : null;
+				Integer rightFace = polygonInteriorOnLeft ? null : edgeId;
 				addEdgePair(a, b, leftFace, rightFace, halfEdges, outgoing, nodes, nodeLookup);
 				edgeId++;
 			}
@@ -436,16 +466,8 @@ public final class Model {
 			return face.intValue() >= 0 ? face : null;
 		}
 
-		private static void addEdgePair(
-				Coordinate fromCoord,
-				Coordinate toCoord,
-				Integer leftFaceForward,
-				Integer leftFaceBackward,
-				List<HalfEdge> halfEdges,
-				List<List<Integer>> outgoing,
-				List<Coordinate> nodes,
-				Map<CoordKey, Integer> nodeLookup
-		) {
+		private static void addEdgePair(Coordinate fromCoord, Coordinate toCoord, Integer leftFaceForward, Integer leftFaceBackward, List<HalfEdge> halfEdges,
+				List<List<Integer>> outgoing, List<Coordinate> nodes, Map<CoordKey, Integer> nodeLookup) {
 			int from = nodeIndex(fromCoord, nodes, nodeLookup, outgoing);
 			int to = nodeIndex(toCoord, nodes, nodeLookup, outgoing);
 			if (from == to) {
@@ -481,21 +503,6 @@ public final class Model {
 			return newIndex;
 		}
 
-		private static boolean isLeftSideInsidePolygon(Polygon polygon, Coordinate a, Coordinate b) {
-			double dx = b.x - a.x;
-			double dy = b.y - a.y;
-			double len = hypot(dx, dy);
-			if (len == 0.0) {
-				return false;
-			}
-			double nx = -dy / len;
-			double ny = dx / len;
-			double eps = Math.max(1e-9, len * 1e-9);
-			Coordinate mid = new Coordinate((a.x + b.x) * 0.5, (a.y + b.y) * 0.5);
-			Coordinate left = new Coordinate(mid.x + nx * eps, mid.y + ny * eps);
-			return polygon.covers(polygon.getFactory().createPoint(left));
-		}
-
 		private static Coordinate[] sanitizeRing(List<Coordinate> rawRing) {
 			if (rawRing.size() < 3) {
 				return null;
@@ -524,12 +531,14 @@ public final class Model {
 
 		private Geometry fallbackPolygonizerFaces(Polygon polygon) {
 			Geometry coverage = polygon.getBoundary().union(asMultiLineString(polygon.getFactory()));
+			var prepared = new IndexedPointInAreaLocator(polygon);
+
 			Polygonizer polygonizer = new Polygonizer();
 			polygonizer.setCheckRingsValid(false);
 			polygonizer.add(coverage);
 			List<Polygon> faces = new ArrayList<>();
 			for (Object cell : polygonizer.getPolygons()) {
-				if (cell instanceof Polygon face && polygon.covers(face.getInteriorPoint())) {
+				if (cell instanceof Polygon face && prepared.locate(face.getInteriorPoint().getCoordinate()) == Location.INTERIOR) {
 					faces.add(face);
 				}
 			}
