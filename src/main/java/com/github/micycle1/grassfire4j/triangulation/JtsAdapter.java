@@ -1,4 +1,4 @@
-package grassfire2.triangulation;
+package com.github.micycle1.grassfire4j.triangulation;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,7 +22,7 @@ import org.tinfour.standard.IncrementalTin;
 import org.tinfour.utils.HilbertSort;
 import org.tinfour.utils.TriangleCollector;
 
-import grassfire2.geom.Geom.Vec2;
+import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
 
 public class JtsAdapter {
 

@@ -1,14 +1,14 @@
-package grassfire2.model;
+package com.github.micycle1.grassfire4j.model;
 
-import static grassfire2.geom.Geom.STOP_EPS;
-import static grassfire2.geom.Geom.dist2;
+import static com.github.micycle1.grassfire4j.geom.Geom.STOP_EPS;
+import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
 
 import java.util.ArrayList;
 import java.util.List;
 
-import grassfire2.geom.Geom.Line2;
-import grassfire2.geom.Geom.Vec2;
-import grassfire2.geom.Geom.WaveFront;
+import com.github.micycle1.grassfire4j.geom.Geom.Line2;
+import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
+import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
 
 public final class Model {
 

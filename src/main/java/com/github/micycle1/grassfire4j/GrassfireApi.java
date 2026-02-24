@@ -1,13 +1,13 @@
-package grassfire2;
+package com.github.micycle1.grassfire4j;
 
 import org.locationtech.jts.geom.Polygon;
 
-import grassfire2.core.CollapseEventComputer;
-import grassfire2.core.Core;
-import grassfire2.events.Events;
-import grassfire2.model.Model.Skeleton;
-import grassfire2.triangulation.JtsAdapter;
-import grassfire2.triangulation.JtsAdapter.InputMesh;
+import com.github.micycle1.grassfire4j.core.CollapseEventComputer;
+import com.github.micycle1.grassfire4j.core.Core;
+import com.github.micycle1.grassfire4j.events.Events;
+import com.github.micycle1.grassfire4j.model.Model.Skeleton;
+import com.github.micycle1.grassfire4j.triangulation.JtsAdapter;
+import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputMesh;
 
 public class GrassfireApi {
 

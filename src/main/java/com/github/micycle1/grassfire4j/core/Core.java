@@ -1,6 +1,6 @@
-package grassfire2.core;
+package com.github.micycle1.grassfire4j.core;
 
-import static grassfire2.geom.Geom.getBisector;
+import static com.github.micycle1.grassfire4j.geom.Geom.getBisector;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,16 +12,16 @@ import java.util.Map;
 import org.locationtech.jts.algorithm.Orientation;
 import org.locationtech.jts.geom.Coordinate;
 
-import grassfire2.geom.Geom.Vec2;
-import grassfire2.geom.Geom.WaveFront;
-import grassfire2.model.Model.InfiniteVertex;
-import grassfire2.model.Model.KineticTriangle;
-import grassfire2.model.Model.KineticVertex;
-import grassfire2.model.Model.Skeleton;
-import grassfire2.model.Model.SkeletonNode;
-import grassfire2.triangulation.JtsAdapter.InputMesh;
-import grassfire2.triangulation.JtsAdapter.InputTriangle;
-import grassfire2.triangulation.JtsAdapter.InputVertex;
+import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
+import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
+import com.github.micycle1.grassfire4j.model.Model.InfiniteVertex;
+import com.github.micycle1.grassfire4j.model.Model.KineticTriangle;
+import com.github.micycle1.grassfire4j.model.Model.KineticVertex;
+import com.github.micycle1.grassfire4j.model.Model.Skeleton;
+import com.github.micycle1.grassfire4j.model.Model.SkeletonNode;
+import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputMesh;
+import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputTriangle;
+import com.github.micycle1.grassfire4j.triangulation.JtsAdapter.InputVertex;
 
 public final class Core {
 

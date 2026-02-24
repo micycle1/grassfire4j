@@ -1,4 +1,4 @@
-package grassfire2.geom;
+package com.github.micycle1.grassfire4j.geom;
 
 import java.util.ArrayList;
 import java.util.Collections;

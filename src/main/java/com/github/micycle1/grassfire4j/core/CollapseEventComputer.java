@@ -1,24 +1,24 @@
-package grassfire2.core;
+package com.github.micycle1.grassfire4j.core;
 
-import static grassfire2.core.Core.ccw;
-import static grassfire2.core.Core.cw;
-import static grassfire2.geom.Geom.STOP_EPS;
-import static grassfire2.geom.Geom.dot;
-import static grassfire2.geom.Geom.getUniqueTimes;
-import static grassfire2.geom.Geom.nearZero;
-import static grassfire2.geom.Geom.sub;
+import static com.github.micycle1.grassfire4j.core.Core.ccw;
+import static com.github.micycle1.grassfire4j.core.Core.cw;
+import static com.github.micycle1.grassfire4j.geom.Geom.STOP_EPS;
+import static com.github.micycle1.grassfire4j.geom.Geom.dot;
+import static com.github.micycle1.grassfire4j.geom.Geom.getUniqueTimes;
+import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
+import static com.github.micycle1.grassfire4j.geom.Geom.sub;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import grassfire2.geom.Geom.Vec2;
-import grassfire2.model.Model.Event;
-import grassfire2.model.Model.Event.EventType;
-import grassfire2.model.Model.KineticTriangle;
-import grassfire2.model.Model.KineticVertex;
-import grassfire2.model.Model.VertexRef;
+import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
+import com.github.micycle1.grassfire4j.model.Model.Event;
+import com.github.micycle1.grassfire4j.model.Model.KineticTriangle;
+import com.github.micycle1.grassfire4j.model.Model.KineticVertex;
+import com.github.micycle1.grassfire4j.model.Model.VertexRef;
+import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 
 public class CollapseEventComputer {
 

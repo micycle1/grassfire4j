@@ -1,15 +1,15 @@
-package grassfire2.events;
+package com.github.micycle1.grassfire4j.events;
 
-import static grassfire2.core.Core.apex;
-import static grassfire2.core.Core.ccw;
-import static grassfire2.core.Core.cw;
-import static grassfire2.core.Core.dest;
-import static grassfire2.core.Core.orig;
-import static grassfire2.geom.Geom.COS_179_999999;
-import static grassfire2.geom.Geom.dist;
-import static grassfire2.geom.Geom.nearZero;
-import static grassfire2.geom.Geom.norm;
-import static grassfire2.geom.Geom.sub;
+import static com.github.micycle1.grassfire4j.core.Core.apex;
+import static com.github.micycle1.grassfire4j.core.Core.ccw;
+import static com.github.micycle1.grassfire4j.core.Core.cw;
+import static com.github.micycle1.grassfire4j.core.Core.dest;
+import static com.github.micycle1.grassfire4j.core.Core.orig;
+import static com.github.micycle1.grassfire4j.geom.Geom.COS_179_999999;
+import static com.github.micycle1.grassfire4j.geom.Geom.dist;
+import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
+import static com.github.micycle1.grassfire4j.geom.Geom.norm;
+import static com.github.micycle1.grassfire4j.geom.Geom.sub;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -20,19 +20,19 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.function.IntUnaryOperator;
 
-import grassfire2.core.CollapseEventComputer;
-import grassfire2.core.Core;
-import grassfire2.geom.Geom;
-import grassfire2.geom.Geom.Line2;
-import grassfire2.geom.Geom.Vec2;
-import grassfire2.geom.Geom.WaveFront;
-import grassfire2.model.Model.Event;
-import grassfire2.model.Model.Event.EventType;
-import grassfire2.model.Model.KineticTriangle;
-import grassfire2.model.Model.KineticVertex;
-import grassfire2.model.Model.Skeleton;
-import grassfire2.model.Model.SkeletonNode;
-import grassfire2.model.Model.VertexRef;
+import com.github.micycle1.grassfire4j.core.CollapseEventComputer;
+import com.github.micycle1.grassfire4j.core.Core;
+import com.github.micycle1.grassfire4j.geom.Geom;
+import com.github.micycle1.grassfire4j.geom.Geom.Line2;
+import com.github.micycle1.grassfire4j.geom.Geom.Vec2;
+import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
+import com.github.micycle1.grassfire4j.model.Model.Event;
+import com.github.micycle1.grassfire4j.model.Model.KineticTriangle;
+import com.github.micycle1.grassfire4j.model.Model.KineticVertex;
+import com.github.micycle1.grassfire4j.model.Model.Skeleton;
+import com.github.micycle1.grassfire4j.model.Model.SkeletonNode;
+import com.github.micycle1.grassfire4j.model.Model.VertexRef;
+import com.github.micycle1.grassfire4j.model.Model.Event.EventType;
 
 public class Events {
 

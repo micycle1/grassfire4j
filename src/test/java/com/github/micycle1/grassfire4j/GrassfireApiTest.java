@@ -1,4 +1,4 @@
-package grassfire2;
+package com.github.micycle1.grassfire4j;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -25,7 +25,7 @@ import org.locationtech.jts.geom.LinearRing;
 import org.locationtech.jts.geom.Polygon;
 import org.locationtech.jts.index.strtree.STRtree;
 
-import grassfire2.model.Model.Skeleton.Segment;
+import com.github.micycle1.grassfire4j.model.Model.Skeleton.Segment;
 
 class GrassfireApiTest {
 
