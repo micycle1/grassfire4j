@@ -17,7 +17,9 @@ This project is the first full kinetic straight‑skeleton implementation availa
 - Supports variable edge weights.
 - Produces a Skeleton model with nodes, kinetic vertices and skeleton segments suitable for visualisation or export.
 
-## Example
+## Usage
+
+### Example
 
 ```java
 WKTReader reader = new WKTReader();
@@ -29,3 +31,6 @@ MultiLineString bones = skeleton.asMultiLineString();
 
 System.out.println(bones.toText());
 ```
+
+### Maven / Gradle
+grassfire4j is available for Maven / Gradle via [JitPack](https://jitpack.io/#micycle1/grassfire4j).
