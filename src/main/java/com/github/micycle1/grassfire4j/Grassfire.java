@@ -24,6 +24,9 @@ import com.github.micycle1.grassfire4j.model.Model.Skeleton;
  * kinetic skeleton pipeline.
  */
 public class Grassfire {
+	
+	private Grassfire() {
+	}
 
 	/**
 	 * Computes the kinetic straight skeleton of a JTS polygon.

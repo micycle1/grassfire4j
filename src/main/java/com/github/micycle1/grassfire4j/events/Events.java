@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.PriorityQueue;
 import java.util.function.IntUnaryOperator;
 
+import org.locationtech.jts.algorithm.CGAlgorithmsDD;
 import org.locationtech.jts.math.Vector2D;
 
 import com.github.micycle1.grassfire4j.core.CollapseEventComputer;
@@ -40,6 +41,9 @@ public class Events {
 
 	private static final int LOOP_MAX = 50_000;
 	private static final int ALL_SIDES_MASK = 0b111;
+	
+	private Events() {
+	}
 
 	public static class EventQueue {
 		private final PriorityQueue<Event> heap = new PriorityQueue<>();

@@ -31,6 +31,9 @@ import com.github.micycle1.grassfire4j.model.Model.SkeletonNode;
  * any particular frontend adapter.
  */
 public final class Core {
+	
+	private Core() {
+	}
 
 	public static int ccw(int i) { return (i + 1) % 3; }
 	public static int cw(int i) { return (i + 2) % 3; }

@@ -32,6 +32,9 @@ import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
  * {@code InputMesh}, independent of any specific adapter implementation.
  */
 public final class Model {
+	
+	private Model() {
+	}
 
 	public static class SkeletonNode {
 		public final Vector2D pos;

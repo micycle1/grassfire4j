@@ -25,6 +25,9 @@ public class CollapseEventComputer {
 
 	// side indices are only 0, 1, or 2, so can encode them in an int bitmask
 	private static final int ALL_SIDES_MASK = 0b111;
+	
+	private CollapseEventComputer() {
+	}
 
 	public static double findGt(double[] a, double x) {
 		double min = Double.NaN;
