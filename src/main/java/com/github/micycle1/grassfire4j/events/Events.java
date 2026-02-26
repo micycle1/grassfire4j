@@ -5,7 +5,6 @@ import static com.github.micycle1.grassfire4j.core.Core.ccw;
 import static com.github.micycle1.grassfire4j.core.Core.cw;
 import static com.github.micycle1.grassfire4j.core.Core.dest;
 import static com.github.micycle1.grassfire4j.core.Core.orig;
-import static com.github.micycle1.grassfire4j.geom.Geom.COS_179_999999;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
 
 import java.util.ArrayDeque;
@@ -104,36 +103,68 @@ public class Events {
 
 	public static KineticVertex computeNewKVertex(WaveFront wfl, WaveFront wfr, double now, SkeletonNode skNode, int info, boolean internal) {
 		KineticVertex kv = new KineticVertex();
-		kv.info = info; kv.startsAt = now; kv.startNode = skNode; kv.internal = internal;
+		kv.info = info;
+		kv.startsAt = now;
+		kv.startNode = skNode;
+		kv.internal = internal;
+
 		Line2 ul = wfl.line, ur = wfr.line;
-		double u1x = ul.w().getX(), u1y = ul.w().getY(), u2x = ur.w().getX(), u2y = ur.w().getY();
-		double d = Math.max(-1.0, Math.min(1.0, u1x * u2x + u1y * u2y));
-		double dirx = wfl.weight * u1x + wfr.weight * u2x, diry = wfl.weight * u1y + wfr.weight * u2y;
+		Vector2D n1 = ul.w(), n2 = ur.w();
+		double n1x = n1.getX(), n1y = n1.getY(), n2x = n2.getX(), n2y = n2.getY();
+		double dirx = wfl.weight * n1x + wfr.weight * n2x;
+		double diry = wfl.weight * n1y + wfr.weight * n2y;
 
 		Vector2D bi, pos0;
-		if ((nearZero(dirx) && nearZero(diry)) || nearZero(d + 1.0) || d < COS_179_999999) {
-			bi = new Vector2D(0, 0); pos0 = skNode.pos;
-		} else {
-			double denom = u1x * u2y - u2x * u1y;
-			if (nearZero(denom)) {
-				double x1 = u1x * ur.b() - u2x * ul.b(), x2 = u1y * ur.b() - u2y * ul.b();
-				if (nearZero(x1) && nearZero(x2)) {
+
+		// robust exact parallel test
+		int crossSign = CGAlgorithmsDD.signOfDet2x2(n1x, n1y, n2x, n2y);
+		if (crossSign == 0) {
+			// exactly parallel or anti-parallel
+			// treat cancellation of the weighted normals as degenerate
+			if (dirx == 0.0 && diry == 0.0) {
+				bi = new Vector2D(0, 0);
+				pos0 = skNode.pos;
+			} else {
+				// check exact collinearity of the two wavefront lines using direction vectors
+				double dx = wfl.end.getX() - wfl.start.getX();
+				double dy = wfl.end.getY() - wfl.start.getY();
+				double px = wfr.start.getX() - wfl.start.getX();
+				double py = wfr.start.getY() - wfl.start.getY();
+				int colSign = CGAlgorithmsDD.signOfDet2x2(dx, dy, px, py);
+				if (colSign == 0) {
+					// coincident lines -> use half-weighted bisector velocity
 					bi = new Vector2D(0.5 * dirx, 0.5 * diry);
 					pos0 = new Vector2D(skNode.pos.getX() - bi.getX() * now, skNode.pos.getY() - bi.getY() * now);
-				} else { bi = new Vector2D(0, 0); pos0 = skNode.pos; }
+				} else {
+					// parallel but disjoint -> no finite motion
+					bi = new Vector2D(0, 0);
+					pos0 = skNode.pos;
+				}
+			}
+		} else {
+			// non-parallel: compute weighted intersection motion
+			Vector2D p0 = ul.intersectAtTimeWeighted(ur, 0.0, wfl.weight, wfr.weight);
+			Vector2D p1 = ul.intersectAtTimeWeighted(ur, 1.0, wfl.weight, wfr.weight);
+			if (p0 == null || p1 == null) {
+				bi = new Vector2D(0, 0);
+				pos0 = skNode.pos;
 			} else {
-				Vector2D p0 = ul.intersectAtTimeWeighted(ur, 0.0, wfl.weight, wfr.weight);
-				Vector2D p1 = ul.intersectAtTimeWeighted(ur, 1.0, wfl.weight, wfr.weight);
-				if (p0 == null || p1 == null) { bi = new Vector2D(0, 0); pos0 = skNode.pos; }
-				else { pos0 = p0; bi = p1.subtract(p0); }
+				pos0 = p0;
+				bi = p1.subtract(p0);
 			}
 		}
 
 		kv.velocity = bi;
-		if (bi.getX() == 0 && bi.getY() == 0) { kv.infFast = true; kv.origin = skNode.pos; } else {
+		if (bi.getX() == 0.0 && bi.getY() == 0.0) {
+			kv.infFast = true;
+			kv.origin = skNode.pos;
+		} else {
 			kv.origin = pos0;
 		}
-		kv.ul = ul; kv.ur = ur; kv.wfl = wfl; kv.wfr = wfr;
+		kv.ul = ul;
+		kv.ur = ur;
+		kv.wfl = wfl;
+		kv.wfr = wfr;
 		return kv;
 	}
 

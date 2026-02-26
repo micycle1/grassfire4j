@@ -13,7 +13,6 @@ import org.locationtech.jts.math.Vector2D;
 public final class Geom {
 
 	public static final double STOP_EPS = 1e-9;
-	public static final double COS_179_999999 = Math.cos(Math.toRadians(179.999999));
 	private static final double TIME_UNIQUE_TOL = 1e-9;
 	private static final double NEAR_ZERO_EPS = 1e-10;
 	private static final double NEAR_ZERO_EPS_SQ = NEAR_ZERO_EPS * NEAR_ZERO_EPS;
