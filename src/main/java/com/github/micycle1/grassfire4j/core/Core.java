@@ -253,9 +253,80 @@ public final class Core {
 			}
 		}
 
-		ktriangles.sort(Comparator.comparingDouble((KineticTriangle t) -> t.vertices[0].positionAt(0).getY()).thenComparingDouble(t -> t.vertices[0].positionAt(0).getX()));
+		ktriangles.sort(Comparator.comparingDouble((KineticTriangle t) -> t.vertices[0].positionAt(0).getY())
+				.thenComparingDouble(t -> t.vertices[0].positionAt(0).getX()));
 		skel.skNodes.addAll(nodes.values());
 		skel.triangles = ktriangles;
+		skel.boundaryEdges = buildBoundaryEdgesFromMesh(mesh);
 		return skel;
+	}
+
+	/**
+	 * Extracts directed boundary edges from the triangulated input mesh.
+	 * <p>
+	 * Edges are oriented consistently such that the interior of the polygon
+	 * (represented by internal triangles) always lies to the <i>left</i> of the
+	 * directed edge (pointing from {@code from} to {@code to}).
+	 * <p>
+	 * The output list is returned in ascending order of their assigned
+	 * {@code edgeId}. This ensures a stable boundary representation that
+	 * corresponds predictably to the original input segment ordering.
+	 *
+	 * @param mesh the populated input mesh containing vertices and triangles
+	 * @return a deterministically sorted list of oriented boundary edges
+	 */
+	private static List<Skeleton.BoundaryEdge> buildBoundaryEdgesFromMesh(InputMesh mesh) {
+		Map<Integer, Skeleton.BoundaryEdge> byId = new HashMap<>();
+
+		for (int tIdx = 0; tIdx < mesh.triangles.size(); tIdx++) {
+			InputTriangle t = mesh.triangles.get(tIdx);
+			if (!t.isInternal) { // important: orient using an interior triangle
+				continue;
+			}
+
+			for (int i = 0; i < 3; i++) {
+				if (t.c[i] == null)
+					continue;
+				int edgeId = t.c[i].edgeId();
+				if (edgeId < 0)
+					continue;
+
+				int aIdx = t.v[ccw(i)];
+				int bIdx = t.v[cw(i)];
+				int cIdx = t.v[i]; // third vertex of the triangle
+
+				InputVertex av = mesh.vertices.get(aIdx);
+				InputVertex bv = mesh.vertices.get(bIdx);
+				InputVertex cv = mesh.vertices.get(cIdx);
+
+				Coordinate a = new Coordinate(av.x, av.y);
+				Coordinate b = new Coordinate(bv.x, bv.y);
+				Coordinate c = new Coordinate(cv.x, cv.y);
+
+				// Orient boundary edge so the interior triangle lies on the LEFT of (from ->
+				// to).
+				int turn = Orientation.index(a, b, c);
+				if (turn == 0)
+					continue;
+
+				Coordinate from = (turn > 0) ? a : b;
+				Coordinate to = (turn > 0) ? b : a;
+
+				byId.putIfAbsent(edgeId, new Skeleton.BoundaryEdge(from, to, edgeId));
+			}
+		}
+
+		// return in edgeId order (stable)
+		if (byId.isEmpty())
+			return List.of();
+		int max = byId.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1);
+
+		List<Skeleton.BoundaryEdge> out = new ArrayList<>(byId.size());
+		for (int id = 0; id <= max; id++) {
+			Skeleton.BoundaryEdge e = byId.get(id);
+			if (e != null)
+				out.add(e);
+		}
+		return out;
 	}
 }
