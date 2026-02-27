@@ -13,7 +13,6 @@ import org.locationtech.jts.algorithm.Orientation;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.LineString;
 import org.locationtech.jts.geom.Polygon;
-import org.locationtech.jts.math.Vector2D;
 import org.tinfour.common.IConstraint;
 import org.tinfour.common.PolygonConstraint;
 import org.tinfour.common.Vertex;
@@ -34,8 +33,8 @@ import com.github.micycle1.grassfire4j.input.InputMeshBuilder.EdgeRef;
  */
 public class PolygonAdapter implements Adapter<Polygon> {
 
-	private record Edge(Vector2D a, Vector2D b) {
-		Edge(Vector2D a, Vector2D b) {
+	private record Edge(Coordinate a, Coordinate b) {
+		Edge(Coordinate a, Coordinate b) {
 			if (a.getX() < b.getX() || (a.getX() == b.getX() && a.getY() < b.getY())) {
 				this.a = a;
 				this.b = b;
@@ -71,28 +70,27 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		}
 
 		List<Edge> boundaryEdges = getBoundaryEdgesInOrder(polygon);
-		List<Vector2D> boundaryVertices = getBoundaryVerticesInOrder(polygon);
+		List<Coordinate> boundaryVertices = getBoundaryVerticesInOrder(polygon);
 		if (edgeWeights != null && edgeWeights.size() != boundaryEdges.size()) {
 			throw new IllegalArgumentException("edgeWeights size (" + edgeWeights.size() + ") must equal boundary edge count (" + boundaryEdges.size() + ")");
 		}
 
-		Map<Vector2D, Integer> boundaryVertexInfoMap = new HashMap<>();
+		Map<Coordinate, Integer> boundaryVertexInfoMap = new HashMap<>();
 		for (int i = 0; i < boundaryVertices.size(); i++) {
-			Vector2D vertex = boundaryVertices.get(i);
-			Integer info = Integer.valueOf(i);
-			Integer existing = boundaryVertexInfoMap.putIfAbsent(vertex, info);
-			if (existing != null && !existing.equals(info)) {
+			Coordinate vertex = boundaryVertices.get(i);
+			Integer existing = boundaryVertexInfoMap.putIfAbsent(vertex, i);
+			if (existing != null && existing.intValue() != i) {
 				throw new IllegalArgumentException("Conflicting info values mapped to the same boundary vertex");
 			}
 		}
-		final Map<Vector2D, Integer> boundaryInfoByVertex = boundaryVertexInfoMap;
+		final Map<Coordinate, Integer> boundaryInfoByVertex = boundaryVertexInfoMap;
 
 		final var coords = polygon.getCoordinates();
 		final double estPointSpacing = coords[0].distance(coords[1]) / 10;
-		IncrementalTin tin = new IncrementalTin(Math.max(estPointSpacing, 1e-6));
+		IncrementalTin tin = new IncrementalTin(Math.max(estPointSpacing, 1e-8));
 
 		List<Vertex> seedVertices = new ArrayList<>();
-		Set<Vector2D> uniqueVertices = new HashSet<>();
+		Set<Coordinate> uniqueVertices = new HashSet<>();
 		addRingVertices(polygon.getExteriorRing(), seedVertices, uniqueVertices);
 		for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
 			addRingVertices(polygon.getInteriorRingN(i), seedVertices, uniqueVertices);
@@ -121,14 +119,14 @@ public class PolygonAdapter implements Adapter<Polygon> {
 			tin.addConstraints(constraints, false);
 		}
 
-		Map<Vector2D, Integer> vIndex = new HashMap<>();
+		Map<Coordinate, Integer> vIndex = new HashMap<>();
 		List<InputVertex> vertices = new ArrayList<>();
 		List<int[]> triVertices = new ArrayList<>();
 
 		TriangleCollector.visitTrianglesConstrained(tin, tri -> {
 			int[] vIdx = new int[3];
 			for (int i = 0; i < 3; i++) {
-				Vector2D p = new Vector2D(tri[i].getX(), tri[i].getY());
+				Coordinate p = new Coordinate(tri[i].getX(), tri[i].getY());
 				vIdx[i] = vIndex.computeIfAbsent(p, pt -> {
 					Integer info = boundaryInfoByVertex == null ? null : boundaryInfoByVertex.get(pt);
 					vertices.add(new InputVertex(pt.getX(), pt.getY(), true, info));
@@ -174,9 +172,9 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		return boundaryEdges;
 	}
 
-	private static List<Vector2D> getBoundaryVerticesInOrder(Polygon polygon) {
-		List<Vector2D> boundaryVertices = new ArrayList<>();
-		Set<Vector2D> seen = new HashSet<>();
+	private static List<Coordinate> getBoundaryVerticesInOrder(Polygon polygon) {
+		List<Coordinate> boundaryVertices = new ArrayList<>();
+		Set<Coordinate> seen = new HashSet<>();
 		addRingVerticesInOrder(polygon.getExteriorRing(), boundaryVertices, seen);
 		for (int i = 0; i < polygon.getNumInteriorRing(); i++) {
 			addRingVerticesInOrder(polygon.getInteriorRingN(i), boundaryVertices, seen);
@@ -184,10 +182,10 @@ public class PolygonAdapter implements Adapter<Polygon> {
 		return boundaryVertices;
 	}
 
-	private static void addRingVertices(LineString ring, List<Vertex> out, Set<Vector2D> seen) {
+	private static void addRingVertices(LineString ring, List<Vertex> out, Set<Coordinate> seen) {
 		Coordinate[] coords = ring.getCoordinates();
 		for (int i = 0; i < coords.length - 1; i++) {
-			Vector2D point = new Vector2D(coords[i].x, coords[i].y);
+			Coordinate point = new Coordinate(coords[i].x, coords[i].y);
 			if (seen.add(point)) {
 				out.add(new Vertex(point.getX(), point.getY(), Double.NaN));
 			}
@@ -219,14 +217,14 @@ public class PolygonAdapter implements Adapter<Polygon> {
 	private static void addRingEdges(LineString ring, List<Edge> edges) {
 		Coordinate[] coords = ring.getCoordinates();
 		for (int i = 0; i < coords.length - 1; i++) {
-			edges.add(new Edge(new Vector2D(coords[i].x, coords[i].y), new Vector2D(coords[i + 1].x, coords[i + 1].y)));
+			edges.add(new Edge(new Coordinate(coords[i].x, coords[i].y), new Coordinate(coords[i + 1].x, coords[i + 1].y)));
 		}
 	}
 
-	private static void addRingVerticesInOrder(LineString ring, List<Vector2D> out, Set<Vector2D> seen) {
+	private static void addRingVerticesInOrder(LineString ring, List<Coordinate> out, Set<Coordinate> seen) {
 		Coordinate[] coords = ring.getCoordinates();
 		for (int i = 0; i < coords.length - 1; i++) {
-			Vector2D point = new Vector2D(coords[i].x, coords[i].y);
+			Coordinate point = new Coordinate(coords[i].x, coords[i].y);
 			if (seen.add(point)) {
 				out.add(point);
 			}
