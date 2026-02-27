@@ -8,9 +8,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-
-import org.locationtech.jts.algorithm.Orientation;
 import org.locationtech.jts.algorithm.locate.IndexedPointInAreaLocator;
 import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Geometry;
@@ -32,7 +29,7 @@ import com.github.micycle1.grassfire4j.geom.Geom.WaveFront;
  * {@code InputMesh}, independent of any specific adapter implementation.
  */
 public final class Model {
-	
+
 	private Model() {
 	}
 
@@ -348,121 +345,112 @@ public final class Model {
 		 * @return polygonized face geometry
 		 */
 		public Geometry asPolygonFaces() {
-			  Geometry g = buildFacesFromTopology();
-			  return g == null ? new GeometryFactory().createGeometryCollection() : g;
-			}
+			Geometry g = buildFacesFromTopology();
+			return g == null ? new GeometryFactory().createGeometryCollection() : g;
+		}
 
 		private Geometry buildFacesFromTopology() {
-			  GeometryFactory factory = new GeometryFactory();
+			GeometryFactory factory = new GeometryFactory();
 
-			  List<HalfEdge> halfEdges = new ArrayList<>();
-			  List<List<Integer>> outgoing = new ArrayList<>();
-			  List<Coordinate> nodes = new ArrayList<>();
-			  Map<CoordKey, Integer> nodeLookup = new HashMap<>();
+			List<HalfEdge> halfEdges = new ArrayList<>();
+			List<List<Integer>> outgoing = new ArrayList<>();
+			List<Coordinate> nodes = new ArrayList<>();
+			Map<CoordKey, Integer> nodeLookup = new HashMap<>();
 
-			  // 1) Add stored boundary edges (interior is on LEFT of from->to)
-			  for (BoundaryEdge e : boundaryEdges) {
-			    addEdgePair(
-			        e.from(), e.to(),
-			        e.edgeId(), // leftFaceForward
-			        null, // leftFaceBackward = OUTSIDE
-			        halfEdges, outgoing, nodes, nodeLookup
-			    );
-			  }
-
-			  // 2) Add skeleton edges
-			  boolean hasLabeledSkeletonEdges = false;
-			  for (var v : vertices) {
-			    if (v.stopsAt == null || v.startNode == null || v.stopNode == null || v.startNode == v.stopNode) {
-			      continue;
-			    }
-			    Integer leftFace = wavefrontFaceId(v.wfl);
-			    Integer rightFace = wavefrontFaceId(v.wfr);
-			    if (leftFace == null && rightFace == null) {
-			      continue;
-			    }
-			    hasLabeledSkeletonEdges = true;
-			    addEdgePair(
-			        v.startNode.pos.toCoordinate(),
-			        v.stopNode.pos.toCoordinate(),
-			        leftFace,
-			        rightFace,
-			        halfEdges, outgoing, nodes, nodeLookup
-			    );
-			  }
-
-			  if (!hasLabeledSkeletonEdges || halfEdges.isEmpty()) {
-			    return null;
-			  }
-
-			  // 3) Sort outgoing edges by angle (same as before)
-			  int[] indexInOutgoing = new int[halfEdges.size()];
-			  for (List<Integer> edgesAtNode : outgoing) {
-			    edgesAtNode.sort(Comparator.comparingDouble(idx -> halfEdges.get(idx).angle));
-			    for (int i = 0; i < edgesAtNode.size(); i++) {
-			      indexInOutgoing[edgesAtNode.get(i)] = i;
-			    }
-			  }
-
-			  // 4) Build next pointers (same as before)
-			  for (int i = 0; i < halfEdges.size(); i++) {
-			    HalfEdge e = halfEdges.get(i);
-			    List<Integer> aroundTo = outgoing.get(e.to);
-			    if (aroundTo.isEmpty()) {
-			      return null;
-			    }
-			    int twinPos = indexInOutgoing[e.twin];
-			    int nextPos = (twinPos - 1 + aroundTo.size()) % aroundTo.size();
-			    e.next = aroundTo.get(nextPos);
-			  }
-
-			  // 5) Extract faces by walking half-edges (same as before)
-			  boolean[] visited = new boolean[halfEdges.size()];
-			  List<Polygon> faces = new ArrayList<>();
-
-			  for (int i = 0; i < halfEdges.size(); i++) {
-			    HalfEdge start = halfEdges.get(i);
-			    if (start.leftFace == OUTSIDE_FACE || visited[i]) {
-			      continue;
-			    }
-
-			    List<Coordinate> ring = new ArrayList<>();
-			    int current = i;
-			    int guard = 0;
-
-			    while (true) {
-			      if (guard++ > halfEdges.size() + 5) {
-			        return null;
-			      }
-			      HalfEdge edge = halfEdges.get(current);
-			      if (edge.leftFace != start.leftFace || visited[current]) {
-			        break;
-			      }
-			      visited[current] = true;
-			      ring.add(nodes.get(edge.from));
-			      current = edge.next;
-			      if (current == i || current < 0) {
-			        break;
-			      }
-			    }
-
-			    Coordinate[] coords = sanitizeRing(ring);
-			    if (coords == null) {
-			      continue;
-			    }
-
-			    Polygon face = factory.createPolygon(coords);
-			    if (face.getArea() <= FACE_RING_AREA_EPS) {
-			      continue;
-			    }
-			    faces.add(face);
-			  }
-
-			  if (faces.isEmpty()) {
-			    return null;
-			  }
-			  return factory.buildGeometry(faces);
+			// 1) Add stored boundary edges (interior is on LEFT of from->to)
+			for (BoundaryEdge e : boundaryEdges) {
+				addEdgePair(e.from(), e.to(), e.edgeId(), // leftFaceForward
+						null, // leftFaceBackward = OUTSIDE
+						halfEdges, outgoing, nodes, nodeLookup);
 			}
+
+			// 2) Add skeleton edges
+			boolean hasLabeledSkeletonEdges = false;
+			for (var v : vertices) {
+				if (v.stopsAt == null || v.startNode == null || v.stopNode == null || v.startNode == v.stopNode) {
+					continue;
+				}
+				Integer leftFace = wavefrontFaceId(v.wfl);
+				Integer rightFace = wavefrontFaceId(v.wfr);
+				if (leftFace == null && rightFace == null) {
+					continue;
+				}
+				hasLabeledSkeletonEdges = true;
+				addEdgePair(v.startNode.pos.toCoordinate(), v.stopNode.pos.toCoordinate(), leftFace, rightFace, halfEdges, outgoing, nodes, nodeLookup);
+			}
+
+			if (!hasLabeledSkeletonEdges || halfEdges.isEmpty()) {
+				return null;
+			}
+
+			// 3) Sort outgoing edges by angle (same as before)
+			int[] indexInOutgoing = new int[halfEdges.size()];
+			for (List<Integer> edgesAtNode : outgoing) {
+				edgesAtNode.sort(Comparator.comparingDouble(idx -> halfEdges.get(idx).angle));
+				for (int i = 0; i < edgesAtNode.size(); i++) {
+					indexInOutgoing[edgesAtNode.get(i)] = i;
+				}
+			}
+
+			// 4) Build next pointers (same as before)
+			for (HalfEdge halfEdge : halfEdges) {
+				HalfEdge e = halfEdge;
+				List<Integer> aroundTo = outgoing.get(e.to);
+				if (aroundTo.isEmpty()) {
+					return null;
+				}
+				int twinPos = indexInOutgoing[e.twin];
+				int nextPos = (twinPos - 1 + aroundTo.size()) % aroundTo.size();
+				e.next = aroundTo.get(nextPos);
+			}
+
+			// 5) Extract faces by walking half-edges (same as before)
+			boolean[] visited = new boolean[halfEdges.size()];
+			List<Polygon> faces = new ArrayList<>();
+
+			for (int i = 0; i < halfEdges.size(); i++) {
+				HalfEdge start = halfEdges.get(i);
+				if (start.leftFace == OUTSIDE_FACE || visited[i]) {
+					continue;
+				}
+
+				List<Coordinate> ring = new ArrayList<>();
+				int current = i;
+				int guard = 0;
+
+				while (true) {
+					if (guard++ > halfEdges.size() + 5) {
+						return null;
+					}
+					HalfEdge edge = halfEdges.get(current);
+					if (edge.leftFace != start.leftFace || visited[current]) {
+						break;
+					}
+					visited[current] = true;
+					ring.add(nodes.get(edge.from));
+					current = edge.next;
+					if (current == i || current < 0) {
+						break;
+					}
+				}
+
+				Coordinate[] coords = sanitizeRing(ring);
+				if (coords == null) {
+					continue;
+				}
+
+				Polygon face = factory.createPolygon(coords);
+				if (face.getArea() <= FACE_RING_AREA_EPS) {
+					continue;
+				}
+				faces.add(face);
+			}
+
+			if (faces.isEmpty()) {
+				return null;
+			}
+			return factory.buildGeometry(faces);
+		}
 
 		private static Integer wavefrontFaceId(WaveFront wavefront) {
 			if (wavefront == null || !(wavefront.data instanceof Integer face)) {

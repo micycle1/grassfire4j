@@ -27,11 +27,11 @@ import com.github.micycle1.grassfire4j.model.Model.SkeletonNode;
  * Core initialisation routines that convert an {@link InputMesh} into the
  * kinetic model used by the event-driven straight-skeleton solver.
  * <p>
- * Since this layer depends only on {@link InputMesh}, it is decoupled from
- * any particular frontend adapter.
+ * Since this layer depends only on {@link InputMesh}, it is decoupled from any
+ * particular frontend adapter.
  */
 public final class Core {
-	
+
 	private Core() {
 	}
 
@@ -62,7 +62,10 @@ public final class Core {
 		int[] vArr = mesh.triangles.get(nIdx).v;
 		int nSide = -1;
 		for (int i = 0; i < 3; i++) {
-			if (vArr[i] == vIdx) { nSide = i; break; }
+			if (vArr[i] == vIdx) {
+				nSide = i;
+				break;
+			}
 		}
 		return nSide < 0 ? -1 : cornerId(nIdx, nSide);
 	}
@@ -158,7 +161,9 @@ public final class Core {
 			InputVertex v = mesh.vertices.get(i);
 			if (v.isFinite) {
 				nodes.put(i, new SkeletonNode(new Vector2D(v.x, v.y), -1, v.info));
-				sumX += v.x; sumY += v.y; count++;
+				sumX += v.x;
+				sumY += v.y;
+				count++;
 			} else {
 				infNodes.put(i, new InfiniteVertex(new Vector2D(v.x, v.y)));
 			}
@@ -168,7 +173,9 @@ public final class Core {
 		List<KineticTriangle> ktriangles = new ArrayList<>();
 		for (int i = 0; i < mesh.triangles.size(); i++) {
 			KineticTriangle k = new KineticTriangle();
-			k.info = i + 1; k.uid = i + 1; k.internal = mesh.triangles.get(i).isInternal;
+			k.info = i + 1;
+			k.uid = i + 1;
+			k.internal = mesh.triangles.get(i).isInternal;
 			ktriangles.add(k);
 		}
 
@@ -184,8 +191,9 @@ public final class Core {
 				if (t.c[i] != null) {
 					InputVertex start = mesh.vertices.get(t.v[ccw(i)]);
 					InputVertex end = mesh.vertices.get(t.v[cw(i)]);
-					Object wavefrontData = t.c[i].edgeId() >= 0 ? Integer.valueOf(t.c[i].edgeId()) : null;
-					k.wavefrontSupportLines[i] = new WaveFront(new Vector2D(start.x, start.y), new Vector2D(end.x, end.y), null, t.c[i].weight(), wavefrontData);
+					Object wavefrontData = t.c[i].edgeId() >= 0 ? t.c[i].edgeId() : null;
+					k.wavefrontSupportLines[i] = new WaveFront(new Vector2D(start.x, start.y), new Vector2D(end.x, end.y), null, t.c[i].weight(),
+							wavefrontData);
 				}
 			}
 			for (int i = 0; i < 3; i++) {
@@ -197,7 +205,8 @@ public final class Core {
 
 		var stars = buildVertexStars(mesh);
 		int ct = 0;
-		record Link(Corner left, KineticVertex kv, Corner right) {}
+		record Link(Corner left, KineticVertex kv, Corner right) {
+		}
 		List<Link> links = new ArrayList<>();
 
 		for (int vIdx = 0; vIdx < stars.size(); vIdx++) {
@@ -212,9 +221,8 @@ public final class Core {
 				InputVertex head = mesh.vertices.get(tFirst.v[ccw(first.side())]);
 
 				int turn = Orientation.index(new Coordinate(tail.x, tail.y), new Coordinate(mid.x, mid.y), new Coordinate(head.x, head.y));
-				KineticVertex.Turn turnType = turn == -1
-						? KineticVertex.Turn.RIGHT_REFLEX
-								: (turn == 1 ? KineticVertex.Turn.LEFT_CONVEX : KineticVertex.Turn.STRAIGHT);
+				KineticVertex.Turn turnType = turn == -1 ? KineticVertex.Turn.RIGHT_REFLEX
+						: (turn == 1 ? KineticVertex.Turn.LEFT_CONVEX : KineticVertex.Turn.STRAIGHT);
 
 				WaveFront right = ktriangles.get(first.tIdx()).wavefrontSupportLines[cw(first.side())];
 				WaveFront left = ktriangles.get(last.tIdx()).wavefrontSupportLines[ccw(last.side())];
@@ -226,7 +234,10 @@ public final class Core {
 				kv.startNode = nodes.get(vIdx);
 				kv.startsAt = 0.0;
 				kv.turn = turnType;
-				kv.ul = left.line; kv.ur = right.line; kv.wfl = left; kv.wfr = right;
+				kv.ul = left.line;
+				kv.ur = right.line;
+				kv.wfl = left;
+				kv.wfr = right;
 
 				for (Corner c : group) {
 					KineticTriangle kt = ktriangles.get(c.tIdx());
@@ -278,18 +289,19 @@ public final class Core {
 	private static List<Skeleton.BoundaryEdge> buildBoundaryEdgesFromMesh(InputMesh mesh) {
 		Map<Integer, Skeleton.BoundaryEdge> byId = new HashMap<>();
 
-		for (int tIdx = 0; tIdx < mesh.triangles.size(); tIdx++) {
-			InputTriangle t = mesh.triangles.get(tIdx);
+		for (InputTriangle t : mesh.triangles) {
 			if (!t.isInternal) { // important: orient using an interior triangle
 				continue;
 			}
 
 			for (int i = 0; i < 3; i++) {
-				if (t.c[i] == null)
+				if (t.c[i] == null) {
 					continue;
+				}
 				int edgeId = t.c[i].edgeId();
-				if (edgeId < 0)
+				if (edgeId < 0) {
 					continue;
+				}
 
 				int aIdx = t.v[ccw(i)];
 				int bIdx = t.v[cw(i)];
@@ -306,8 +318,9 @@ public final class Core {
 				// Orient boundary edge so the interior triangle lies on the LEFT of (from ->
 				// to).
 				int turn = Orientation.index(a, b, c);
-				if (turn == 0)
+				if (turn == 0) {
 					continue;
+				}
 
 				Coordinate from = (turn > 0) ? a : b;
 				Coordinate to = (turn > 0) ? b : a;
@@ -317,15 +330,17 @@ public final class Core {
 		}
 
 		// return in edgeId order (stable)
-		if (byId.isEmpty())
+		if (byId.isEmpty()) {
 			return List.of();
+		}
 		int max = byId.keySet().stream().mapToInt(Integer::intValue).max().orElse(-1);
 
 		List<Skeleton.BoundaryEdge> out = new ArrayList<>(byId.size());
 		for (int id = 0; id <= max; id++) {
 			Skeleton.BoundaryEdge e = byId.get(id);
-			if (e != null)
+			if (e != null) {
 				out.add(e);
+			}
 		}
 		return out;
 	}

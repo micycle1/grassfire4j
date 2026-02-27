@@ -24,14 +24,14 @@ import com.github.micycle1.grassfire4j.model.Model.Skeleton;
  * kinetic skeleton pipeline.
  */
 public class Grassfire {
-	
+
 	private Grassfire() {
 	}
 
 	/**
-	 * Computes the kinetic straight skeleton of a JTS polygon.
+	 * Computes the kinetic straight skeleton of a JTS {@link Polygon}.
 	 * <p>
-	 * Supports polygons with holes via the provided JTS {@link Polygon}.
+	 * Supports polygons with holes.
 	 *
 	 * @param polygon polygon input (outer shell and optional interior rings)
 	 * @return skeleton model containing nodes, kinetic vertices, and segments
@@ -44,10 +44,10 @@ public class Grassfire {
 	 * Computes the kinetic straight skeleton from user-supplied input via an
 	 * adapter.
 	 *
-	 * @param <T> source input type
-	 * @param input source input object
+	 * @param <T>     source input type
+	 * @param input   source input object
 	 * @param adapter input adapter that converts {@code input} into
-	 *        {@link InputMesh}
+	 *                {@link InputMesh}
 	 * @return skeleton model containing nodes, kinetic vertices, and segments
 	 */
 	public static <T> Skeleton computeSkeleton(T input, Adapter<T> adapter) {

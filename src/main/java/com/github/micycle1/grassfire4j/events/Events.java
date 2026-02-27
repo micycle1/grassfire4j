@@ -40,7 +40,7 @@ public class Events {
 
 	private static final int LOOP_MAX = 50_000;
 	private static final int ALL_SIDES_MASK = 0b111;
-	
+
 	private Events() {
 	}
 
@@ -54,7 +54,9 @@ public class Events {
 			heap.add(item);
 		}
 
-		public void discard(Event item) { item.valid = false; }
+		public void discard(Event item) {
+			item.valid = false;
+		}
 
 		public Event pop() {
 			while (!heap.isEmpty()) {
@@ -88,14 +90,21 @@ public class Events {
 		}
 		if (skNode == null) {
 			if (pos == null) {
-				double sx=0, sy=0;
-				for (var v : V) { Vector2D p = v.positionAt(now); sx += p.getX(); sy += p.getY(); }
+				double sx = 0, sy = 0;
+				for (var v : V) {
+					Vector2D p = v.positionAt(now);
+					sx += p.getX();
+					sy += p.getY();
+				}
 				pos = new Vector2D(sx / V.size(), sy / V.size());
 			}
 			skNode = new SkeletonNode(pos, step, null);
 			isNew = true;
 		}
-		for (var v : V) { v.stopNode = skNode; v.stopsAt = now; }
+		for (var v : V) {
+			v.stopNode = skNode;
+			v.stopsAt = now;
+		}
 		if (isNew) {
 			skel.skNodes.add(skNode);
 		}
@@ -169,20 +178,27 @@ public class Events {
 	}
 
 	public static void replaceInQueue(KineticTriangle t, double now, EventQueue queue, Deque<Event> imm) {
-		if (t.event != null) { queue.discard(t.event); imm.remove(t.event); }
+		if (t.event != null) {
+			queue.discard(t.event);
+			imm.remove(t.event);
+		}
 		Event e = CollapseEventComputer.compute(t, now, false);
 		if (e != null) {
 			queue.add(e);
 		}
 	}
 
-	public static List<KineticTriangle> replaceKVertex(KineticTriangle t, KineticVertex v, KineticVertex newv, double now, IntUnaryOperator dir, EventQueue queue, Deque<Event> imm) {
+	public static List<KineticTriangle> replaceKVertex(KineticTriangle t, KineticVertex v, KineticVertex newv, double now, IntUnaryOperator dir,
+			EventQueue queue, Deque<Event> imm) {
 		List<KineticTriangle> fan = new ArrayList<>();
 		while (t != null) {
 			int side = t.indexOfVertex(v);
 			fan.add(t);
 			t.vertices[side] = newv;
-			if (newv.infFast && t.event != null) { queue.discard(t.event); imm.remove(t.event); } else {
+			if (newv.infFast && t.event != null) {
+				queue.discard(t.event);
+				imm.remove(t.event);
+			} else {
 				replaceInQueue(t, now, queue, imm);
 			}
 			t = t.neighbours[dir.applyAsInt(side)];
@@ -191,7 +207,10 @@ public class Events {
 	}
 
 	public static void schedImm(KineticTriangle tri, double now, EventQueue queue, Deque<Event> imm) {
-		if (tri.event != null) { queue.discard(tri.event); imm.remove(tri.event); }
+		if (tri.event != null) {
+			queue.discard(tri.event);
+			imm.remove(tri.event);
+		}
 		Event e = CollapseEventComputer.computeNewEdgeCollapse(tri, now);
 		if (tri.getType() == 3) {
 			e = new Event(now, tri, ALL_SIDES_MASK, EventType.EDGE, 3);
@@ -216,25 +235,38 @@ public class Events {
 		VertexRef A = t0.vertices[ax0], B = t0.vertices[or0], C = t1.vertices[ax1], D = t0.vertices[de0];
 		KineticTriangle AB = t0.neighbours[de0], BC = t1.neighbours[or1], CD = t1.neighbours[de1], DA = t0.neighbours[or0];
 
-		KineticTriangle[] nghs = {AB, BC, CD, DA};
-		VertexRef[] cors = {A, B, C, D};
+		KineticTriangle[] nghs = { AB, BC, CD, DA };
+		VertexRef[] cors = { A, B, C, D };
 		int[] sides = new int[4];
-		for (int i=0; i<4; i++) {
+		for (int i = 0; i < 4; i++) {
 			sides[i] = nghs[i] == null ? -1 : ccw(nghs[i].indexOfVertex(cors[i]));
 		}
 
-		KineticTriangle[] ts = {t0, t0, t1, t1};
-		for (int i=0; i<4; i++) {
+		KineticTriangle[] ts = { t0, t0, t1, t1 };
+		for (int i = 0; i < 4; i++) {
 			if (nghs[i] != null) {
 				nghs[i].neighbours[sides[i]] = ts[i];
 			}
 		}
 
-		t0.vertices[0]=A; t0.vertices[1]=B; t0.vertices[2]=C; t0.neighbours[0]=BC; t0.neighbours[1]=t1; t0.neighbours[2]=AB;
-		t1.vertices[0]=C; t1.vertices[1]=D; t1.vertices[2]=A; t1.neighbours[0]=DA; t1.neighbours[1]=t0; t1.neighbours[2]=CD;
+		t0.vertices[0] = A;
+		t0.vertices[1] = B;
+		t0.vertices[2] = C;
+		t0.neighbours[0] = BC;
+		t0.neighbours[1] = t1;
+		t0.neighbours[2] = AB;
+		t1.vertices[0] = C;
+		t1.vertices[1] = D;
+		t1.vertices[2] = A;
+		t1.neighbours[0] = DA;
+		t1.neighbours[1] = t0;
+		t1.neighbours[2] = CD;
 	}
 
-	/** Python handle_edge_event_1side: for type-3 triangle where only 1 side is reported collapsing. */
+	/**
+	 * Python handle_edge_event_1side: for type-3 triangle where only 1 side is
+	 * reported collapsing.
+	 */
 	public static void handleEdge1Side(Event evt, int step, Skeleton skel, EventQueue q, Deque<Event> imm) {
 		KineticTriangle t = evt.tri;
 		int e = evt.singleSide();
@@ -245,7 +277,7 @@ public class Events {
 		KineticVertex v2 = (KineticVertex) t.vertices[cw(e)];
 
 		stopKVertices(List.of(v1, v2), step, now, skel, null);
-		KineticVertex kv = computeNewKVertex(v1.wfl, v2.wfr, now, v1.stopNode, skel.vertices.size()+1, v1.internal || v2.internal);
+		KineticVertex kv = computeNewKVertex(v1.wfl, v2.wfr, now, v1.stopNode, skel.vertices.size() + 1, v1.internal || v2.internal);
 		skel.vertices.add(kv);
 
 		stopKVertices(List.of(v0, kv), step, now, skel, null);
@@ -256,13 +288,13 @@ public class Events {
 		KineticTriangle t = evt.tri;
 		int e = evt.singleSide();
 		double now = evt.time;
-		KineticVertex v1 = (KineticVertex)t.vertices[ccw(e)], v2 = (KineticVertex)t.vertices[cw(e)];
+		KineticVertex v1 = (KineticVertex) t.vertices[ccw(e)], v2 = (KineticVertex) t.vertices[cw(e)];
 
 		// Use intersection of wavefront support lines at time now when possible.
 		Vector2D pos = Geom.intersectionAtTimeWeighted(v1.wfl, v2.wfr, now);
 
 		stopKVertices(List.of(v1, v2), step, now, skel, pos);
-		KineticVertex kv = computeNewKVertex(v1.wfl, v2.wfr, now, v1.stopNode, skel.vertices.size()+1, v1.internal || v2.internal);
+		KineticVertex kv = computeNewKVertex(v1.wfl, v2.wfr, now, v1.stopNode, skel.vertices.size() + 1, v1.internal || v2.internal);
 		skel.vertices.add(kv);
 
 		VertexRef lRef = v1.getLeft(), rRef = v2.getRight();
@@ -276,7 +308,7 @@ public class Events {
 			aTri.neighbours[aTri.indexOfNeighbour(t)] = bTri;
 			fanA = replaceKVertex(aTri, v2, kv, now, Core::cw, q, imm);
 			if (!fanA.isEmpty()) {
-				KineticTriangle tLast = fanA.get(fanA.size()-1);
+				KineticTriangle tLast = fanA.get(fanA.size() - 1);
 				int sideIdx = cw(tLast.indexOfVertex(kv));
 				VertexRef orig = tLast.vertices[ccw(sideIdx)];
 				VertexRef dest = tLast.vertices[cw(sideIdx)];
@@ -289,7 +321,7 @@ public class Events {
 			bTri.neighbours[bTri.indexOfNeighbour(t)] = aTri;
 			fanB = replaceKVertex(bTri, v1, kv, now, Core::ccw, q, imm);
 			if (!fanB.isEmpty()) {
-				KineticTriangle tLast = fanB.get(fanB.size()-1);
+				KineticTriangle tLast = fanB.get(fanB.size() - 1);
 				int sideIdx = cw(tLast.indexOfVertex(kv));
 				VertexRef orig = tLast.vertices[ccw(sideIdx)];
 				VertexRef dest = tLast.vertices[cw(sideIdx)];
@@ -347,9 +379,9 @@ public class Events {
 		stopKVertices(List.of(v), step, now, skel, null);
 		SkeletonNode skNode = v.stopNode;
 
-		KineticVertex vb = computeNewKVertex(v.wfl, v2.wfl, now, skNode, skel.vertices.size()+1, v.internal || v2.internal);
+		KineticVertex vb = computeNewKVertex(v.wfl, v2.wfl, now, skNode, skel.vertices.size() + 1, v.internal || v2.internal);
 		skel.vertices.add(vb);
-		KineticVertex va = computeNewKVertex(v1.wfr, v.wfr, now, skNode, skel.vertices.size()+1, v.internal || v1.internal);
+		KineticVertex va = computeNewKVertex(v1.wfr, v.wfr, now, skNode, skel.vertices.size() + 1, v.internal || v1.internal);
 		skel.vertices.add(va);
 
 		updateCirc(v.getLeft(), vb, now);
@@ -379,16 +411,8 @@ public class Events {
 		}
 	}
 
-	private static void handleParallelFan(
-			List<KineticTriangle> fan,
-			KineticVertex pivot,
-			double now,
-			IntUnaryOperator direction,
-			int step,
-			Skeleton skel,
-			EventQueue q,
-			Deque<Event> imm
-			) {
+	private static void handleParallelFan(List<KineticTriangle> fan, KineticVertex pivot, double now, IntUnaryOperator direction, int step, Skeleton skel,
+			EventQueue q, Deque<Event> imm) {
 		if (fan == null || fan.isEmpty()) {
 			throw new IllegalArgumentException("expected fan of triangles");
 		}
@@ -399,15 +423,18 @@ public class Events {
 		KineticTriangle firstTri = fan.get(0);
 		if (firstTri.getType() == 3) {
 			double[] dists = new double[3];
-			for (int side=0; side<3; side++) {
+			for (int side = 0; side < 3; side++) {
 				VertexRef s = firstTri.vertices[ccw(side)];
 				VertexRef e = firstTri.vertices[cw(side)];
 				dists[side] = s.positionAt(now).distance(e.positionAt(now));
 			}
 			double mn = Math.min(dists[0], Math.min(dists[1], dists[2]));
 			int ct = 0, idx = -1;
-			for (int i=0; i<3; i++) {
-				if (nearZero(dists[i] - mn)) { ct++; idx = i; }
+			for (int i = 0; i < 3; i++) {
+				if (nearZero(dists[i] - mn)) {
+					ct++;
+					idx = i;
+				}
 			}
 			if (nearZero(mn) && ct == 1) {
 				KineticVertex pivot2 = (KineticVertex) firstTri.vertices[idx];
@@ -427,8 +454,8 @@ public class Events {
 		} else {
 			throw new IllegalStateException("Unexpected direction operator: op(0)=" + d0);
 		}
-		KineticTriangle left = isCw ? fan.get(0) : fan.get(fan.size()-1);
-		KineticTriangle right = isCw ? fan.get(fan.size()-1) : fan.get(0);
+		KineticTriangle left = isCw ? fan.get(0) : fan.get(fan.size() - 1);
+		KineticTriangle right = isCw ? fan.get(fan.size() - 1) : fan.get(0);
 
 		int leftLegIdx = ccw(left.indexOfVertex(pivot));
 		VertexRef vls = left.vertices[ccw(leftLegIdx)];
@@ -506,10 +533,8 @@ public class Events {
 		return false;
 	}
 
-	private static void handleParallelEdgeEventShorterLeg(
-			KineticTriangle t, int e, KineticVertex pivot, double now, int step,
-			Skeleton skel, EventQueue q, Deque<Event> imm
-			) {
+	private static void handleParallelEdgeEventShorterLeg(KineticTriangle t, int e, KineticVertex pivot, double now, int step, Skeleton skel, EventQueue q,
+			Deque<Event> imm) {
 		KineticVertex v1 = (KineticVertex) t.vertices[ccw(e)];
 		KineticVertex v2 = (KineticVertex) t.vertices[cw(e)];
 
@@ -529,10 +554,13 @@ public class Events {
 			return;
 		}
 
-		if (pivot.stopNode == null) { pivot.stopNode = skNode; pivot.stopsAt = now; }
+		if (pivot.stopNode == null) {
+			pivot.stopNode = skNode;
+			pivot.stopsAt = now;
+		}
 		t.stopsAt = now;
 
-		KineticVertex kv = computeNewKVertex(v1.wfl, v2.wfr, now, skNode, skel.vertices.size()+1, v1.internal || v2.internal);
+		KineticVertex kv = computeNewKVertex(v1.wfl, v2.wfr, now, skNode, skel.vertices.size() + 1, v1.internal || v2.internal);
 		// Python: overwrite wfl/wfr from the circular neighbors (or None).
 		VertexRef leftRef = v1.getLeft();
 		if (leftRef == null) {
@@ -590,10 +618,8 @@ public class Events {
 		}
 	}
 
-	private static void handleParallelEdgeEventEvenLegs(
-			KineticTriangle t, int e, KineticVertex pivot, double now, int step,
-			Skeleton skel, EventQueue q, Deque<Event> imm
-			) {
+	private static void handleParallelEdgeEventEvenLegs(KineticTriangle t, int e, KineticVertex pivot, double now, int step, Skeleton skel, EventQueue q,
+			Deque<Event> imm) {
 		KineticVertex v1 = (KineticVertex) t.vertices[ccw(e)];
 		KineticVertex v2 = (KineticVertex) t.vertices[cw(e)];
 		stopKVertices(List.of(v1, v2), step, now, skel, null);
@@ -610,10 +636,8 @@ public class Events {
 		}
 	}
 
-	private static void handleParallelEdgeEvent3Tri(
-			KineticTriangle t, int e, KineticVertex pivot, double now, int step,
-			Skeleton skel, EventQueue q, Deque<Event> imm
-			) {
+	private static void handleParallelEdgeEvent3Tri(KineticTriangle t, int e, KineticVertex pivot, double now, int step, Skeleton skel, EventQueue q,
+			Deque<Event> imm) {
 		KineticVertex v1 = (KineticVertex) t.vertices[ccw(e)];
 		KineticVertex v2 = (KineticVertex) t.vertices[cw(e)];
 
@@ -643,7 +667,8 @@ public class Events {
 
 		while (!q.isEmpty() || !imm.isEmpty()) {
 			if (guard++ > LOOP_MAX) {
-				throw new RuntimeException("Exceeded maximum event loop iterations (" + LOOP_MAX + ") (probably degenerate input in some way that is unhandled)");
+				throw new RuntimeException(
+						"Exceeded maximum event loop iterations (" + LOOP_MAX + ") (probably degenerate input in some way that is unhandled)");
 			}
 			step++;
 			Event evt = imm.isEmpty() ? q.pop() : imm.pollFirst();
@@ -658,7 +683,8 @@ public class Events {
 
 			if (evt.tp == EventType.EDGE) {
 				if (evt.sideCount() == 3) {
-					stopKVertices(Arrays.asList((KineticVertex)evt.tri.vertices[0], (KineticVertex)evt.tri.vertices[1], (KineticVertex)evt.tri.vertices[2]), step, now, skel, null);
+					stopKVertices(Arrays.asList((KineticVertex) evt.tri.vertices[0], (KineticVertex) evt.tri.vertices[1], (KineticVertex) evt.tri.vertices[2]),
+							step, now, skel, null);
 					for (var n : evt.tri.neighbours) {
 						if (n != null && n.event != null && n.stopsAt == null) {
 							n.neighbours[n.indexOfNeighbour(evt.tri)] = null;

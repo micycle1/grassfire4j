@@ -72,7 +72,8 @@ public final class InputMeshBuilder {
 		return buildWithConstraints(vertices, triangleVertices, edgeConstraints, true);
 	}
 
-	public static InputMesh buildWithConstraints(List<InputVertex> vertices, List<int[]> triangleVertices, Map<EdgeRef, Constraint> edgeConstraints, boolean isInternal) {
+	public static InputMesh buildWithConstraints(List<InputVertex> vertices, List<int[]> triangleVertices, Map<EdgeRef, Constraint> edgeConstraints,
+			boolean isInternal) {
 		Map<EdgeRef, Constraint> constraints = edgeConstraints == null ? Collections.emptyMap() : edgeConstraints;
 		Map<EdgeRef, List<SideRef>> edgeToSides = new HashMap<>();
 		for (int tIdx = 0; tIdx < triangleVertices.size(); tIdx++) {
