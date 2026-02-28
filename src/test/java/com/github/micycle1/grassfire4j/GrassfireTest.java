@@ -60,6 +60,27 @@ class GrassfireTest {
 	}
 
 	@Test
+	void segmentTimesEncodedAsZ() {
+		List<List<Coordinate>> rings = List
+				.of(List.of(c(0.0, 0.0), c(10.0, 0.0), c(10.0, 10.0), c(0.0, 10.0), c(0.0, 0.0)));
+		Polygon polygon = toPolygon(rings);
+		var skeleton = Grassfire.computeSkeleton(polygon);
+
+		for (Segment segment : skeleton.segments()) {
+			assertFalse(Double.isNaN(segment.p1().getZ()), "Segment start should encode time in Z");
+			assertFalse(Double.isNaN(segment.p2().getZ()), "Segment end should encode time in Z");
+			assertTrue(segment.p2().getZ() >= segment.p1().getZ(), "Segment end time should not be before start time");
+		}
+
+		var multiLineString = skeleton.asMultiLineString();
+		for (int i = 0; i < multiLineString.getNumGeometries(); i++) {
+			Coordinate[] coords = multiLineString.getGeometryN(i).getCoordinates();
+			assertFalse(Double.isNaN(coords[0].getZ()), "MultiLineString start coordinate should encode time in Z");
+			assertFalse(Double.isNaN(coords[1].getZ()), "MultiLineString end coordinate should encode time in Z");
+		}
+	}
+
+	@Test
 	void duplicatedVerticesShouldError() {
 		List<List<Coordinate>> rings = List.of(List.of(
 				c(0.0, 0.0), c(0.0, 0.0),
