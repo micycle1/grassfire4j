@@ -6,16 +6,24 @@ A kinetic straight‑skeleton (wavefront‑collapse / “grassfire”) implement
 
 ## Overview
 
-This project is the first full kinetic straight‑skeleton implementation available in Java. Compared to the other notable Java implementation, [campskeleton](https://github.com/twak/campskeleton), which uses Felkel’s edge‑collision approach, grassfire4j uses a triangulation + kinetic event queue approach with careful tie‑breaking and degenerate‑case handling. In practice this yields better behaviour and significantly improved performance on polygonal inputs.
+### What is a straight skeleton?
+The straight skeleton of a polygon is the set of line segments traced by the polygon’s vertices as the boundary is offset inward at uniform speed (the “wavefront” or “grassfire” process). Each edge moves parallel to itself; wavefront vertices follow the bisectors of their incident angles. The union of these vertex trajectories forms an embedded graph inside the polygon: the straight skeleton.
 
-The core algorithm is derived from a Python [implementation](https://github.com/bmmeijers/grassfire) by bmmeijers. I [forked](https://github.com/micycle1/grassfire2) that project to rearchitect and improve it (using some ideas from the the academic [surfer2](https://github.com/cgalab/surfer2) C++ project), then ported and adapted the Python fork to Java.
+### Kinetic approach
+`grassfire4j` implements the triangulation + kinetic event-queue algorithm of Aichholzer & Aurenhammer[^1]. It maintains a constrained triangulation of the region not yet swept by the wavefront while all wavefront vertices move linearly in time. For each triangle, the signed area is a quadratic function of time, so the time at which the triangle collapses can be obtained directly from the polynomial’s roots. Each collapse triggers a local topological update (e.g., flip, split, edge). These events are inserted into a priority queue and processed in increasing time order, advancing the wavefront and incrementally building the straight skeleton.
+
+### Project
+This project is the first full kinetic straight‑skeleton implementation available in Java. Compared to the other notable Java implementation, [campskeleton](https://github.com/twak/campskeleton), which uses Felkel’s edge‑collision approach, `grassfire4j` follows the triangulation‑based kinetic method described above. In practice this is more robust and significantly faster.
+
+The core algorithm is derived from a Python [implementation](https://github.com/bmmeijers/grassfire) by bmmeijers. I [forked](https://github.com/micycle1/grassfire2) that project to re‑architect and improve it (drawing on ideas from the academic [surfer2](https://github.com/cgalab/surfer2) C++ project), then ported and adapted the fork to Java.
 
 ## Features
-- Kinetic (wavefront‑collapse) straight‑skeleton computed entirely in Java.
-- Accepts JTS `Polygon` inputs; supports polygons with holes.
-- Adapter-based input pipeline (`InputMesh`) makes it easy to plug in user-supplied adapters for other input types.
-- Supports variable edge weights.
-- Produces a Skeleton model with nodes, kinetic vertices and skeleton segments suitable for visualisation or export.
+- Pure-Java kinetic (wavefront-collapse) straight skeleton.
+- Accepts JTS `Polygon` inputs, including holes.
+- Supports per-edge weights.
+- Outputs a `Skeleton` model (nodes, kinetic vertices, segments) suitable for visualisation or export.
+- Skeleton coordinates include a `.z` time/height component (useful for extrusion, i.e. rooftops).
+- Adapter-based input pipeline (`InputMesh`) for plugging in custom inputs.
 
 ## Usage
 
@@ -40,3 +48,5 @@ grassfire4j is available for Maven / Gradle via [JitPack](https://jitpack.io/#mi
 <p align="center">
   <img src="resources/a.png" width="32%" /><img src="resources/b.png" width="32%" /><img src="resources/c.png" width="32%" />
 </p>
+
+[^1]: https://dl.acm.org/doi/10.5555/646715.701578
