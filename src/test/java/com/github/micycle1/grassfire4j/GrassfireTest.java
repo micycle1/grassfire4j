@@ -43,6 +43,11 @@ class GrassfireTest {
 	private static final Path CSV_DIR = Path.of("src", "test", "resources", "csv");
 	private static final Map<String, Integer> EXPECTED_SEGMENTS = expectedSegments();
 
+	private static final double EPS_AREA = 1e-9;
+	private static final double EPS_COORD = 1e-10;
+	private static final double EPS_ORIENTATION = 1e-12;
+	private static final double ROUND_FACTOR = 1e10;
+
 	@Test
 	void internalSegmentsCount() {
 		List<List<Coordinate>> rings = List.of(List.of(c(0.0, 0.0), c(20.0, 0.0), c(20.0, 10.0), c(10.0, 10.0),
@@ -99,7 +104,7 @@ class GrassfireTest {
 		var skeleton = Grassfire.computeSkeleton(polygon);
 		var faces = skeleton.asPolygonFaces();
 
-		assertEquals(polygon.getArea(), faces.getArea(), 1e-9,
+		assertEquals(polygon.getArea(), faces.getArea(), EPS_AREA,
 				"Faces area should match polygon area (holes preserved)");
 		assertFalse(faces.covers(GEOMETRY_FACTORY.createPoint(c(6.0, 6.0))), "Hole interior should remain empty");
 	}
@@ -146,9 +151,9 @@ class GrassfireTest {
 		assertTrue(sp1.getNumGeometries() == sp2.getNumGeometries());
 		assertTrue(sp3.getNumGeometries() == sp4.getNumGeometries());
 		assertTrue(sp1.getNumGeometries() == sp3.getNumGeometries());
-		assertEquals(sp1.getArea(), sp2.getArea(), 1e-9);
-		assertEquals(sp3.getArea(), sp4.getArea(), 1e-9);
-		assertEquals(sp1.getArea(), sp3.getArea(), 1e-9);
+		assertEquals(sp1.getArea(), sp2.getArea(), EPS_AREA);
+		assertEquals(sp3.getArea(), sp4.getArea(), EPS_AREA);
+		assertEquals(sp1.getArea(), sp3.getArea(), EPS_AREA);
 	}
 
 	private static List<Polygon> getOrientationCombinations(List<List<Coordinate>> rings) {
@@ -223,6 +228,7 @@ class GrassfireTest {
 		}
 
 		Integer expected = EXPECTED_SEGMENTS.get(csvFile.getFileName().toString());
+		Set<String> baselineSegments = null;
 
 		for (Polygon polygon : getOrientationCombinations(rings)) {
 			var skeleton = Grassfire.computeSkeleton(polygon);
@@ -231,6 +237,16 @@ class GrassfireTest {
 			if (expected != null) {
 				assertEquals(expected.intValue(), segments.size(),
 						"Unexpected segment count for " + csvFile.getFileName());
+			}
+
+			Set<String> currentSegments = canonicalSegments(segments);
+			if (baselineSegments == null) {
+				baselineSegments = currentSegments;
+			} else {
+				assertEquals(baselineSegments.size(), currentSegments.size(),
+						"Skeleton segment counts should match regardless of ring orientation");
+				assertEquals(baselineSegments, currentSegments,
+						"Skeletons should be identical regardless of ring orientation");
 			}
 
 			Set<PointKey> skeletonEndpoints = new HashSet<>();
@@ -271,7 +287,7 @@ class GrassfireTest {
 			}
 
 			var faces = skeleton.asPolygonFaces();
-			assertEquals(polygon.getArea(), faces.getArea(), 1e-9);
+			assertEquals(polygon.getArea(), faces.getArea(), EPS_AREA);
 			var polys = (List<Polygon>) PolygonExtracter.getPolygons(faces);
 			var polyArray = polys.toArray(new Geometry[0]);
 			assertTrue(CoverageValidator.isValid(polyArray));
@@ -347,14 +363,12 @@ class GrassfireTest {
 	}
 
 	private static boolean pointEqual(PointKey a, PointKey b) {
-		double tol = 1e-10;
-		return Math.abs(a.x - b.x) < tol && Math.abs(a.y - b.y) < tol;
+		return Math.abs(a.x - b.x) < EPS_COORD && Math.abs(a.y - b.y) < EPS_COORD;
 	}
 
 	private static int orientation(PointKey p, PointKey q, PointKey r) {
 		double val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
-		double tol = 1e-12;
-		if (Math.abs(val) < tol) {
+		if (Math.abs(val) < EPS_ORIENTATION) {
 			return 0;
 		}
 		return val > 0 ? 1 : 2;
@@ -376,11 +390,11 @@ class GrassfireTest {
 	}
 
 	private static String canonicalPoint(double x, double y) {
-		return round6(x) + "," + round6(y);
+		return round(x) + "," + round(y);
 	}
 
-	private static double round6(double v) {
-		return Math.rint(v * 1_000_000.0) / 1_000_000.0;
+	private static double round(double v) {
+		return Math.rint(v * ROUND_FACTOR) / ROUND_FACTOR;
 	}
 
 	private static Integer findVertexInfo(InputMesh mesh, double x, double y) {
