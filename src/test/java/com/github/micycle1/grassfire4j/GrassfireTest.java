@@ -69,6 +69,8 @@ class GrassfireTest {
 		for (Segment segment : skeleton.segments()) {
 			assertFalse(Double.isNaN(segment.p1().getZ()), "Segment start should encode time in Z");
 			assertFalse(Double.isNaN(segment.p2().getZ()), "Segment end should encode time in Z");
+			assertTrue(segment.p1().getZ() >= 0.0, "Segment start time should be non-negative");
+			assertTrue(segment.p2().getZ() >= 0.0, "Segment end time should be non-negative");
 			assertTrue(segment.p2().getZ() >= segment.p1().getZ(), "Segment end time should not be before start time");
 		}
 
