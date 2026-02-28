@@ -2,6 +2,7 @@ package com.github.micycle1.grassfire4j;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.DynamicTest.dynamicTest;
@@ -56,6 +57,21 @@ class GrassfireTest {
 		Polygon polygon = toPolygon(rings);
 		var skeleton = Grassfire.computeSkeleton(polygon);
 		assertEquals(8, skeleton.segments().size(), "Unexpected internal segment count");
+	}
+
+	@Test
+	void duplicatedVerticesShouldError() {
+		List<List<Coordinate>> rings = List.of(List.of(
+				c(0.0, 0.0), c(0.0, 0.0),
+				c(20.0, 0.0), c(20.0, 0.0),
+				c(20.0, 10.0), c(20.0, 10.0),
+				c(10.0, 10.0), c(10.0, 10.0),
+				c(10.0, 20.0), c(10.0, 20.0),
+				c(0.0, 20.0), c(0.0, 20.0),
+				c(0.0, 0.0), c(0.0, 0.0)));
+
+		Polygon polygon = toPolygon(rings);
+		assertThrows(IllegalArgumentException.class, () -> Grassfire.computeSkeleton(polygon));
 	}
 
 	@TestFactory
