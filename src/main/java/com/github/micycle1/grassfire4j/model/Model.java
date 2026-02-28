@@ -380,7 +380,10 @@ public final class Model {
 					continue;
 				}
 				hasLabeledSkeletonEdges = true;
-				addEdgePair(v.startNode.pos.toCoordinate(), v.stopNode.pos.toCoordinate(), leftFace, rightFace, halfEdges, outgoing, nodes, nodeLookup);
+				double startTime = v.startsAt == null ? 0.0 : v.startsAt.doubleValue();
+				addEdgePair(new Coordinate(v.startNode.pos.getX(), v.startNode.pos.getY(), startTime),
+						new Coordinate(v.stopNode.pos.getX(), v.stopNode.pos.getY(), v.stopsAt.doubleValue()), leftFace, rightFace, halfEdges, outgoing, nodes,
+						nodeLookup);
 			}
 
 			if (!hasLabeledSkeletonEdges || halfEdges.isEmpty()) {
@@ -491,10 +494,14 @@ public final class Model {
 			CoordKey key = new CoordKey(c.x, c.y);
 			Integer idx = nodeLookup.get(key);
 			if (idx != null) {
+				Coordinate existing = nodes.get(idx.intValue());
+				if (Double.isNaN(existing.getZ()) && !Double.isNaN(c.getZ())) {
+					nodes.set(idx.intValue(), new Coordinate(existing.x, existing.y, c.getZ()));
+				}
 				return idx;
 			}
 			int newIndex = nodes.size();
-			nodes.add(new Coordinate(c.x, c.y));
+			nodes.add(new Coordinate(c.x, c.y, c.getZ()));
 			outgoing.add(new ArrayList<>());
 			nodeLookup.put(key, newIndex);
 			return newIndex;
@@ -518,7 +525,7 @@ public final class Model {
 			Coordinate first = out.get(0);
 			Coordinate last = out.get(out.size() - 1);
 			if (!first.equals2D(last)) {
-				out.add(new Coordinate(first.x, first.y));
+				out.add(new Coordinate(first.x, first.y, first.getZ()));
 			}
 			if (out.size() < 4) {
 				return null;

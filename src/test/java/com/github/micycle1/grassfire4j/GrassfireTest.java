@@ -80,6 +80,16 @@ class GrassfireTest {
 			assertFalse(Double.isNaN(coords[0].getZ()), "MultiLineString start coordinate should encode time in Z");
 			assertFalse(Double.isNaN(coords[1].getZ()), "MultiLineString end coordinate should encode time in Z");
 		}
+
+		var faces = skeleton.asPolygonFaces();
+		boolean hasEncodedFaceTime = false;
+		for (Coordinate c : faces.getCoordinates()) {
+			if (!Double.isNaN(c.getZ())) {
+				assertTrue(c.getZ() >= 0.0, "Face coordinate time should be non-negative");
+				hasEncodedFaceTime = hasEncodedFaceTime || c.getZ() > 0.0;
+			}
+		}
+		assertTrue(hasEncodedFaceTime, "asPolygonFaces should contain encoded positive time in Z");
 	}
 
 	@Test
