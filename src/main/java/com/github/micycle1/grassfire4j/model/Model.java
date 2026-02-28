@@ -293,13 +293,17 @@ public final class Model {
 		public List<Segment> segments() {
 			List<Segment> segs = new ArrayList<>();
 			for (var v : vertices) {
+				double startTime = v.startsAt == null ? 0.0 : v.startsAt.doubleValue();
 				if (v.stopsAt != null) {
 					if (v.startNode == v.stopNode) {
 						continue;
 					}
-					segs.add(new Segment(v.startNode.pos.toCoordinate(), v.stopNode.pos.toCoordinate(), v.startNode.info, v.stopNode.info));
+					segs.add(new Segment(new Coordinate(v.startNode.pos.getX(), v.startNode.pos.getY(), startTime),
+							new Coordinate(v.stopNode.pos.getX(), v.stopNode.pos.getY(), v.stopsAt.doubleValue()), v.startNode.info, v.stopNode.info));
 				} else {
-					segs.add(new Segment(v.startNode.pos.toCoordinate(), v.positionAt(1000.0).toCoordinate(), v.startNode.info, null));
+					Vector2D rayEnd = v.positionAt(1000.0);
+					segs.add(new Segment(new Coordinate(v.startNode.pos.getX(), v.startNode.pos.getY(), startTime),
+							new Coordinate(rayEnd.getX(), rayEnd.getY(), 1000.0), v.startNode.info, null));
 				}
 			}
 			return segs;
