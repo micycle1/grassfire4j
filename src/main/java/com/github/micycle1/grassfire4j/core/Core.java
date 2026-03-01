@@ -3,11 +3,13 @@ package com.github.micycle1.grassfire4j.core;
 import static com.github.micycle1.grassfire4j.geom.Geom.getBisector;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 
 import org.locationtech.jts.algorithm.Orientation;
 import org.locationtech.jts.geom.Coordinate;
@@ -42,6 +44,39 @@ public final class Core {
 	public static int dest(int i) { return (i + 2) % 3; }
 
 	public record Corner(int tIdx, int side) {}
+
+	private record PointKey(double x, double y) implements Comparable<PointKey> {
+		@Override
+		public int compareTo(PointKey o) {
+			int cx = Double.compare(this.x, o.x);
+			return cx != 0 ? cx : Double.compare(this.y, o.y);
+		}
+	}
+
+	private record TriangleKey(PointKey a, PointKey b, PointKey c) implements Comparable<TriangleKey> {
+		static TriangleKey from(InputMesh mesh, InputTriangle tri) {
+			PointKey[] pts = new PointKey[3];
+			for (int i = 0; i < 3; i++) {
+				InputVertex v = mesh.vertices.get(tri.v[i]);
+				pts[i] = new PointKey(v.x, v.y);
+			}
+			Arrays.sort(pts);
+			return new TriangleKey(pts[0], pts[1], pts[2]);
+		}
+
+		@Override
+		public int compareTo(TriangleKey o) {
+			int ca = this.a.compareTo(o.a);
+			if (ca != 0) {
+				return ca;
+			}
+			int cb = this.b.compareTo(o.b);
+			if (cb != 0) {
+				return cb;
+			}
+			return this.c.compareTo(o.c);
+		}
+	}
 
 	private static int cornerId(int tIdx, int side) { return tIdx * 3 + side; }
 	private static int cornerTri(int cornerId) { return cornerId / 3; }
@@ -154,6 +189,7 @@ public final class Core {
 		Skeleton skel = new Skeleton();
 		Map<Integer, SkeletonNode> nodes = new HashMap<>();
 		Map<Integer, InfiniteVertex> infNodes = new HashMap<>();
+		Map<TriangleKey, Integer> canonicalUids = canonicalTriangleUids(mesh);
 		double sumX = 0, sumY = 0;
 		int count = 0;
 
@@ -174,7 +210,7 @@ public final class Core {
 		for (int i = 0; i < mesh.triangles.size(); i++) {
 			KineticTriangle k = new KineticTriangle();
 			k.info = i + 1;
-			k.uid = i + 1;
+			k.uid = canonicalUids.get(TriangleKey.from(mesh, mesh.triangles.get(i))).intValue();
 			k.internal = mesh.triangles.get(i).isInternal;
 			ktriangles.add(k);
 		}
@@ -270,6 +306,19 @@ public final class Core {
 		skel.triangles = ktriangles;
 		skel.boundaryEdges = buildBoundaryEdgesFromMesh(mesh);
 		return skel;
+	}
+
+	private static Map<TriangleKey, Integer> canonicalTriangleUids(InputMesh mesh) {
+		Map<TriangleKey, Integer> out = new HashMap<>();
+		TreeMap<TriangleKey, Integer> ordered = new TreeMap<>();
+		for (InputTriangle tri : mesh.triangles) {
+			ordered.putIfAbsent(TriangleKey.from(mesh, tri), Integer.valueOf(0));
+		}
+		int uid = 1;
+		for (TriangleKey key : ordered.keySet()) {
+			out.put(key, Integer.valueOf(uid++));
+		}
+		return out;
 	}
 
 	/**

@@ -286,7 +286,6 @@ public final class Model {
 		 * Returns all skeleton segments as endpoint pairs.
 		 * <p>
 		 * Stopped vertices produce finite segments from start node to stop node.
-		 * Non-stopped vertices are represented by a long ray sampled at {@code t=1000}.
 		 *
 		 * @return list of skeleton segments
 		 */

@@ -288,6 +288,7 @@ public class Events {
 		KineticTriangle t = evt.tri;
 		int e = evt.singleSide();
 		double now = evt.time;
+		KineticVertex v0 = (KineticVertex) t.vertices[e];
 		KineticVertex v1 = (KineticVertex) t.vertices[ccw(e)], v2 = (KineticVertex) t.vertices[cw(e)];
 
 		// Use intersection of wavefront support lines at time now when possible.
@@ -351,6 +352,11 @@ public class Events {
 				handleParallelFan(new ArrayList<>(fanB), kv, now, Core::ccw, step, skel, q, imm);
 			}
 		}
+
+		// Defensive topology cleanup: if an apex/new vertex is no longer referenced by
+		// any active triangle, stop it now so it does not get emitted as an unbounded ray.
+		stopIfOrphan(v0, now, step, skel);
+		stopIfOrphan(kv, now, step, skel);
 	}
 
 	public static void handleFlip(Event evt, double now, EventQueue q, Deque<Event> imm) {
@@ -531,6 +537,61 @@ public class Events {
 			}
 		}
 		return false;
+	}
+
+	private static void stopIfOrphan(KineticVertex v, double now, int step, Skeleton skel) {
+		if (v == null || v.stopsAt != null) {
+			return;
+		}
+		if (isReferencedByActiveTriangle(v, skel)) {
+			return;
+		}
+		SkeletonNode node = adjacentStoppedNodeAtTime(v, now);
+		if (node != null) {
+			v.stopNode = node;
+			v.stopsAt = now;
+			return;
+		}
+		stopKVertices(List.of(v), step, now, skel, v.positionAt(now));
+	}
+
+	private static boolean isReferencedByActiveTriangle(KineticVertex v, Skeleton skel) {
+		for (KineticTriangle tri : skel.triangles) {
+			if (tri.stopsAt != null) {
+				continue;
+			}
+			for (VertexRef ref : tri.vertices) {
+				if (ref == v) {
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+
+	private static SkeletonNode adjacentStoppedNodeAtTime(KineticVertex v, double now) {
+		SkeletonNode leftNode = stoppedNodeAtTime(v.getLeft(), now);
+		SkeletonNode rightNode = stoppedNodeAtTime(v.getRight(), now);
+		if (leftNode == null) {
+			return rightNode;
+		}
+		if (rightNode == null || rightNode == leftNode) {
+			return leftNode;
+		}
+		if (leftNode.pos.getX() < rightNode.pos.getX()) {
+			return leftNode;
+		}
+		if (leftNode.pos.getX() > rightNode.pos.getX()) {
+			return rightNode;
+		}
+		return leftNode.pos.getY() <= rightNode.pos.getY() ? leftNode : rightNode;
+	}
+
+	private static SkeletonNode stoppedNodeAtTime(VertexRef ref, double now) {
+		if (!(ref instanceof KineticVertex kv) || kv.stopNode == null || kv.stopsAt == null) {
+			return null;
+		}
+		return nearZero(kv.stopsAt - now) ? kv.stopNode : null;
 	}
 
 	private static void handleParallelEdgeEventShorterLeg(KineticTriangle t, int e, KineticVertex pivot, double now, int step, Skeleton skel, EventQueue q,
