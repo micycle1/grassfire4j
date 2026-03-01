@@ -28,6 +28,10 @@ public final class Geom {
 		return Math.abs(val) <= NEAR_ZERO_EPS;
 	}
 
+	public static boolean nearZeroTime(double val) {
+		return Math.abs(val) <= TIME_UNIQUE_TOL;
+	}
+
 	public static boolean nearZeroSq(double valSq) {
 		return Math.abs(valSq) <= NEAR_ZERO_EPS_SQ;
 	}

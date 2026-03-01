@@ -6,6 +6,7 @@ import static com.github.micycle1.grassfire4j.core.Core.cw;
 import static com.github.micycle1.grassfire4j.core.Core.dest;
 import static com.github.micycle1.grassfire4j.core.Core.orig;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
+import static com.github.micycle1.grassfire4j.geom.Geom.nearZeroTime;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -82,7 +83,7 @@ public class Events {
 		for (var v : V) {
 			if (v.stopsAt != null) {
 				skNode = v.stopNode;
-			} else if (nearZero(v.startsAt - now)) {
+			} else if (nearZeroTime(v.startsAt - now)) {
 				skNode = v.startNode;
 			} else {
 				v.stopsAt = now;
@@ -591,7 +592,7 @@ public class Events {
 		if (!(ref instanceof KineticVertex kv) || kv.stopNode == null || kv.stopsAt == null) {
 			return null;
 		}
-		return nearZero(kv.stopsAt - now) ? kv.stopNode : null;
+		return nearZeroTime(kv.stopsAt - now) ? kv.stopNode : null;
 	}
 
 	private static void handleParallelEdgeEventShorterLeg(KineticTriangle t, int e, KineticVertex pivot, double now, int step, Skeleton skel, EventQueue q,
