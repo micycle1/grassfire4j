@@ -14,7 +14,7 @@ public final class Geom {
 
 	public static final double STOP_EPS = 1e-9;
 	private static final double TIME_UNIQUE_TOL = 1e-9;
-	private static final double NEAR_ZERO_EPS = 1e-10;
+	private static final double NEAR_ZERO_EPS = 1e-8;
 	private static final double NEAR_ZERO_EPS_SQ = NEAR_ZERO_EPS * NEAR_ZERO_EPS;
 
 	private Geom() {

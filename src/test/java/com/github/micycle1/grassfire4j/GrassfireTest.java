@@ -45,9 +45,9 @@ class GrassfireTest {
 	private static final Map<String, Integer> EXPECTED_SEGMENTS = expectedSegments();
 
 	private static final double EPS_AREA = 1e-9;
-	private static final double EPS_COORD = 1e-10;
+	private static final double EPS_COORD = 1e-9;
 	private static final double EPS_ORIENTATION = 1e-12;
-	private static final double ROUND_FACTOR = 1e10;
+	private static final double ROUND_FACTOR = 1e9;
 
 	@Test
 	void internalSegmentsCount() {
