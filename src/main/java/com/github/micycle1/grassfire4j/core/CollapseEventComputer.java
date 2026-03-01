@@ -6,6 +6,7 @@ import static com.github.micycle1.grassfire4j.geom.Geom.STOP_EPS;
 import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
 import static com.github.micycle1.grassfire4j.geom.Geom.getUniqueTimes;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
+import static com.github.micycle1.grassfire4j.geom.Geom.nearZeroTime;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZeroSq;
 
 import java.util.Arrays;
@@ -32,7 +33,7 @@ public class CollapseEventComputer {
 	public static double findGt(double[] a, double x) {
 		double min = Double.NaN;
 		for (double v : a) {
-			if (!Double.isNaN(v) && !nearZero(v - x) && v > x) {
+			if (!Double.isNaN(v) && !nearZeroTime(v - x) && v > x) {
 				if (Double.isNaN(min) || v < min) {
 					min = v;
 				}
@@ -184,7 +185,7 @@ public class CollapseEventComputer {
 		double[] d2 = new double[3];
 		double[] tArea = areaCollapseTimes(o, d, a, now);
 		for (double t : tArea) {
-			if (nearZero(Math.abs(t - now))) {
+			if (nearZeroTime(t - now)) {
 				sideD2(o, d, a, now, d2);
 				int zerosMask = 0;
 				for (int i = 0; i < 3; i++) {
@@ -219,7 +220,7 @@ public class CollapseEventComputer {
 		if (Double.isNaN(te) && Double.isNaN(ta)) {
 			return null;
 		}
-		if (!Double.isNaN(te) && !Double.isNaN(ta) && nearZero(Math.abs(te - ta))) {
+		if (!Double.isNaN(te) && !Double.isNaN(ta) && nearZeroTime(te - ta)) {
 			// Python tie-break: try classify as edge by relative-min; else flip.
 			sideD2(o, d, a, te, d2);
 			double m = Math.min(d2[0], Math.min(d2[1], d2[2]));
@@ -273,7 +274,7 @@ public class CollapseEventComputer {
 
 		// if apex hits wavefront edge "now", classify immediately (edge / split /
 		// flip).
-		if (!Double.isNaN(tc) && nearZero(Math.abs(tc - now))) {
+		if (!Double.isNaN(tc) && nearZeroTime(tc - now)) {
 			sideD2(o, d, a, now, d2);
 
 			int zeroLenMask = 0;
@@ -297,7 +298,7 @@ public class CollapseEventComputer {
 			if (Double.isNaN(ta)) {
 				return null;
 			}
-			if (nearZero(ta - now)) {
+			if (nearZeroTime(ta - now)) {
 				return splitEvt(tri, now, wfSide);
 			}
 			sideD2(o, d, a, ta, d2);
