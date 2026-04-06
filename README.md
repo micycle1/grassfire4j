@@ -25,6 +25,8 @@ The core algorithm is derived from a Python [implementation](https://github.com/
 - Skeleton coordinates include a `.z` time/height component (useful for extrusion, i.e. rooftops).
 - Adapter-based input pipeline (`InputMesh`) for plugging in custom inputs.
 
+_Note the algorithm can fail on highly symmetric input polygons._
+
 ## Usage
 
 ### Example
