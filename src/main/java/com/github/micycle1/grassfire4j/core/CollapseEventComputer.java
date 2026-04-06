@@ -180,6 +180,17 @@ public class CollapseEventComputer {
 		return new Event(time, t, sideMask(side), EventType.SPLIT, t.getType());
 	}
 
+	private static int classifyCollapsedSidesFromLengths(double[] lengths) {
+		double mn = Math.min(lengths[0], Math.min(lengths[1], lengths[2]));
+		int mask = 0;
+		for (int i = 0; i < 3; i++) {
+			if (nearZero(lengths[i] - mn)) {
+				mask |= sideMask(i);
+			}
+		}
+		return mask;
+	}
+
 	private static Event finite0(KineticTriangle tri, double now, boolean strictGt) {
 		KineticVertex o = (KineticVertex) tri.vertices[0], d = (KineticVertex) tri.vertices[1], a = (KineticVertex) tri.vertices[2];
 		double[] d2 = new double[3];
@@ -379,19 +390,13 @@ public class CollapseEventComputer {
 		for (int i = 0; i < 3; i++) {
 			l[i] = Math.sqrt(l[i]);
 		}
-		double mn = Math.min(l[0], Math.min(l[1], l[2]));
-		int zCt = 0, zIdx = -1;
-		for (int i = 0; i < 3; i++) {
-			if (nearZero(l[i] - mn)) {
-				zCt++;
-				zIdx = i;
-			}
-		}
+		int mask = classifyCollapsedSidesFromLengths(l);
+		int zCt = Integer.bitCount(mask);
 		if (zCt == 3) {
 			return edgeEvt(tri, t, ALL_SIDES_MASK);
 		}
 		if (zCt == 1) {
-			return edgeEvt(tri, t, sideMask(zIdx));
+			return edgeEvt(tri, t, mask);
 		}
 		if (zCt == 2) {
 			throw new IllegalStateException("2-triangle: impossible configuration (two sides are equal-min)");
@@ -442,13 +447,7 @@ public class CollapseEventComputer {
 		for (int i = 0; i < 3; i++) {
 			l[i] = Math.sqrt(l[i]);
 		}
-		double mn = Math.min(l[0], Math.min(l[1], l[2]));
-		int mask = 0;
-		for (int i = 0; i < 3; i++) {
-			if (nearZero(l[i] - mn)) {
-				mask |= sideMask(i);
-			}
-		}
+		int mask = classifyCollapsedSidesFromLengths(l);
 		return edgeEvt(tri, time, mask);
 	}
 }
