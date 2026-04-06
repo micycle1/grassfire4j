@@ -51,8 +51,7 @@ class GrassfireTest {
 
 	@Test
 	void internalSegmentsCount() {
-		List<List<Coordinate>> rings = List.of(List.of(c(0.0, 0.0), c(20.0, 0.0), c(20.0, 10.0), c(10.0, 10.0),
-				c(10.0, 20.0), c(0.0, 20.0), c(0.0, 0.0)));
+		List<List<Coordinate>> rings = List.of(List.of(c(0.0, 0.0), c(20.0, 0.0), c(20.0, 10.0), c(10.0, 10.0), c(10.0, 20.0), c(0.0, 20.0), c(0.0, 0.0)));
 
 		Polygon polygon = toPolygon(rings);
 		var skeleton = Grassfire.computeSkeleton(polygon);
@@ -61,8 +60,7 @@ class GrassfireTest {
 
 	@Test
 	void segmentTimesEncodedAsZ() {
-		List<List<Coordinate>> rings = List
-				.of(List.of(c(0.0, 0.0), c(10.0, 0.0), c(10.0, 10.0), c(0.0, 10.0), c(0.0, 0.0)));
+		List<List<Coordinate>> rings = List.of(List.of(c(0.0, 0.0), c(10.0, 0.0), c(10.0, 10.0), c(0.0, 10.0), c(0.0, 0.0)));
 		Polygon polygon = toPolygon(rings);
 		var skeleton = Grassfire.computeSkeleton(polygon);
 
@@ -94,14 +92,8 @@ class GrassfireTest {
 
 	@Test
 	void duplicatedVerticesShouldError() {
-		List<List<Coordinate>> rings = List.of(List.of(
-				c(0.0, 0.0), c(0.0, 0.0),
-				c(20.0, 0.0), c(20.0, 0.0),
-				c(20.0, 10.0), c(20.0, 10.0),
-				c(10.0, 10.0), c(10.0, 10.0),
-				c(10.0, 20.0), c(10.0, 20.0),
-				c(0.0, 20.0), c(0.0, 20.0),
-				c(0.0, 0.0), c(0.0, 0.0)));
+		List<List<Coordinate>> rings = List.of(List.of(c(0.0, 0.0), c(0.0, 0.0), c(20.0, 0.0), c(20.0, 0.0), c(20.0, 10.0), c(20.0, 10.0), c(10.0, 10.0),
+				c(10.0, 10.0), c(10.0, 20.0), c(10.0, 20.0), c(0.0, 20.0), c(0.0, 20.0), c(0.0, 0.0), c(0.0, 0.0)));
 
 		Polygon polygon = toPolygon(rings);
 		assertThrows(IllegalArgumentException.class, () -> Grassfire.computeSkeleton(polygon));
@@ -109,19 +101,16 @@ class GrassfireTest {
 
 	@TestFactory
 	Stream<DynamicTest> skeletonIntegrity() throws IOException {
-		return csvFiles()
-				.map(csvFile -> dynamicTest(csvFile.getFileName().toString(), () -> runSkeletonIntegrity(csvFile)));
+		return csvFiles().map(csvFile -> dynamicTest(csvFile.getFileName().toString(), () -> runSkeletonIntegrity(csvFile)));
 	}
 
 	@Test
 	void weightedPolygonDiffersFromUnweighted() {
-		List<List<Coordinate>> rings = List
-				.of(List.of(c(0.0, 0.0), c(10.0, 0.0), c(10.0, 6.0), c(0.0, 6.0), c(0.0, 0.0)));
+		List<List<Coordinate>> rings = List.of(List.of(c(0.0, 0.0), c(10.0, 0.0), c(10.0, 6.0), c(0.0, 6.0), c(0.0, 0.0)));
 		Polygon polygon = toPolygon(rings);
 
 		var unweighted = Grassfire.computeSkeleton(polygon);
-		var weighted = Grassfire.computeSkeleton(polygon,
-				p -> new PolygonAdapter().toMesh(p, List.of(0.5, 3.0, 1.0, 1.0)));
+		var weighted = Grassfire.computeSkeleton(polygon, p -> new PolygonAdapter().toMesh(p, List.of(0.5, 3.0, 1.0, 1.0)));
 
 		Set<String> unweightedSegments = canonicalSegments(unweighted.segments());
 		Set<String> weightedSegments = canonicalSegments(weighted.segments());
@@ -131,8 +120,7 @@ class GrassfireTest {
 
 	@Test
 	void boundaryVertexInfoAutoAssignedByIndex() {
-		List<List<Coordinate>> rings = List
-				.of(List.of(c(0.0, 0.0), c(10.0, 0.0), c(10.0, 10.0), c(0.0, 10.0), c(0.0, 0.0)));
+		List<List<Coordinate>> rings = List.of(List.of(c(0.0, 0.0), c(10.0, 0.0), c(10.0, 10.0), c(0.0, 10.0), c(0.0, 0.0)));
 		Polygon polygon = toPolygon(rings);
 
 		var mesh = new PolygonAdapter().toMesh(polygon);
@@ -145,16 +133,14 @@ class GrassfireTest {
 
 	@Test
 	void polygonFacesPreserveInputHole() {
-		List<List<Coordinate>> rings = List.of(
-				List.of(c(0.0, 0.0), c(12.0, 0.0), c(12.0, 12.0), c(0.0, 12.0), c(0.0, 0.0)),
+		List<List<Coordinate>> rings = List.of(List.of(c(0.0, 0.0), c(12.0, 0.0), c(12.0, 12.0), c(0.0, 12.0), c(0.0, 0.0)),
 				List.of(c(4.0, 4.0), c(8.0, 4.0), c(8.0, 8.0), c(4.0, 8.0), c(4.0, 4.0)));
 
 		Polygon polygon = toPolygon(rings);
 		var skeleton = Grassfire.computeSkeleton(polygon);
 		var faces = skeleton.asPolygonFaces();
 
-		assertEquals(polygon.getArea(), faces.getArea(), EPS_AREA,
-				"Faces area should match polygon area (holes preserved)");
+		assertEquals(polygon.getArea(), faces.getArea(), EPS_AREA, "Faces area should match polygon area (holes preserved)");
 		assertFalse(faces.covers(GEOMETRY_FACTORY.createPoint(c(6.0, 6.0))), "Hole interior should remain empty");
 	}
 
@@ -174,12 +160,9 @@ class GrassfireTest {
 		var skeleton3 = Grassfire.computeSkeleton(polygon3);
 		var skeleton4 = Grassfire.computeSkeleton(polygon4);
 
-		assertEquals(skeleton1.segments().size(), skeleton2.segments().size(),
-				"Skeleton segment counts should match regardless of ring orientation");
-		assertEquals(skeleton1.segments().size(), skeleton3.segments().size(),
-				"Skeleton segment counts should match regardless of ring orientation");
-		assertEquals(skeleton1.segments().size(), skeleton4.segments().size(),
-				"Skeleton segment counts should match regardless of ring orientation");
+		assertEquals(skeleton1.segments().size(), skeleton2.segments().size(), "Skeleton segment counts should match regardless of ring orientation");
+		assertEquals(skeleton1.segments().size(), skeleton3.segments().size(), "Skeleton segment counts should match regardless of ring orientation");
+		assertEquals(skeleton1.segments().size(), skeleton4.segments().size(), "Skeleton segment counts should match regardless of ring orientation");
 
 		Set<String> segments1 = canonicalSegments(skeleton1.segments());
 		Set<String> segments2 = canonicalSegments(skeleton2.segments());
@@ -284,18 +267,15 @@ class GrassfireTest {
 			List<Segment> segments = skeleton.segments();
 
 			if (expected != null) {
-				assertEquals(expected.intValue(), segments.size(),
-						"Unexpected segment count for " + csvFile.getFileName());
+				assertEquals(expected.intValue(), segments.size(), "Unexpected segment count for " + csvFile.getFileName());
 			}
 
 			Set<String> currentSegments = canonicalSegments(segments);
 			if (baselineSegments == null) {
 				baselineSegments = currentSegments;
 			} else {
-				assertEquals(baselineSegments.size(), currentSegments.size(),
-						"Skeleton segment counts should match regardless of ring orientation");
-				assertEquals(baselineSegments, currentSegments,
-						"Skeletons should be identical regardless of ring orientation");
+				assertEquals(baselineSegments.size(), currentSegments.size(), "Skeleton segment counts should match regardless of ring orientation");
+				assertEquals(baselineSegments, currentSegments, "Skeletons should be identical regardless of ring orientation");
 			}
 
 			Set<PointKey> skeletonEndpoints = new HashSet<>();
@@ -310,8 +290,7 @@ class GrassfireTest {
 			}
 
 			for (PointKey v : inputVertices) {
-				assertFalse(!skeletonEndpoints.contains(v),
-						"Input vertex " + v + " not found in skeleton endpoints for " + csvFile.getFileName());
+				assertFalse(!skeletonEndpoints.contains(v), "Input vertex " + v + " not found in skeleton endpoints for " + csvFile.getFileName());
 			}
 
 			HPRtree tree = new HPRtree();
@@ -337,8 +316,8 @@ class GrassfireTest {
 
 			var faces = skeleton.asPolygonFaces();
 			assertEquals(polygon.getArea(), faces.getArea(), EPS_AREA);
-			var polys = (List<Polygon>) PolygonExtracter.getPolygons(faces);
-			var polyArray = polys.toArray(new Geometry[0]);
+			var polys = PolygonExtracter.getPolygons(faces);
+			Geometry[] polyArray = (Geometry[]) polys.toArray(new Geometry[0]);
 			assertTrue(CoverageValidator.isValid(polyArray));
 		}
 	}
@@ -348,8 +327,7 @@ class GrassfireTest {
 			return Stream.empty();
 		}
 		try {
-			return Files.list(CSV_DIR).filter(path -> path.getFileName().toString().toLowerCase().endsWith(".csv"))
-					.sorted().toList().stream();
+			return Files.list(CSV_DIR).filter(path -> path.getFileName().toString().toLowerCase().endsWith(".csv")).sorted().toList().stream();
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to list CSV files under " + CSV_DIR, e);
 		}
@@ -428,8 +406,7 @@ class GrassfireTest {
 	}
 
 	private static Set<String> canonicalSegments(List<Segment> segments) {
-		return segments.stream().map(s -> canonicalSegment(s.p1().getX(), s.p1().getY(), s.p2().getX(), s.p2().getY()))
-				.collect(Collectors.toSet());
+		return segments.stream().map(s -> canonicalSegment(s.p1().getX(), s.p1().getY(), s.p2().getX(), s.p2().getY())).collect(Collectors.toSet());
 	}
 
 	private static String canonicalSegment(double x1, double y1, double x2, double y2) {

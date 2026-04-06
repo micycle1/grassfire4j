@@ -340,8 +340,7 @@ public final class Model {
 		 * Polygonizes the partition induced by the input polygon boundary and skeleton
 		 * linework.
 		 * <p>
-		 * The caller should pass the same polygon used to compute this skeleton. Faces
-		 * are derived from a half-edge walk over boundary edges and skeleton arcs
+		 * Faces are derived from a half-edge walk over boundary edges and skeleton arcs
 		 * labeled by source boundary edge IDs. If boundary-edge labels are unavailable
 		 * (e.g. custom adapters not providing IDs), this method falls back to
 		 * polygonizer-based extraction.

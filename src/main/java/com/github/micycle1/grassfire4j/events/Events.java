@@ -361,7 +361,8 @@ public class Events {
 		}
 
 		// Defensive topology cleanup: if an apex/new vertex is no longer referenced by
-		// any active triangle, stop it now so it does not get emitted as an unbounded ray.
+		// any active triangle, stop it now so it does not get emitted as an unbounded
+		// ray.
 		stopIfOrphan(v0, now, step, skel);
 		stopIfOrphan(kv, now, step, skel);
 	}

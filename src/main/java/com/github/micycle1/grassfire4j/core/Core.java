@@ -38,13 +38,28 @@ public final class Core {
 	private Core() {
 	}
 
-	public static int ccw(int i) { return (i + 1) % 3; }
-	public static int cw(int i) { return (i + 2) % 3; }
-	public static int apex(int i) { return i % 3; }
-	public static int orig(int i) { return (i + 1) % 3; }
-	public static int dest(int i) { return (i + 2) % 3; }
+	public static int ccw(int i) {
+		return (i + 1) % 3;
+	}
 
-	public record Corner(int tIdx, int side) {}
+	public static int cw(int i) {
+		return (i + 2) % 3;
+	}
+
+	public static int apex(int i) {
+		return i % 3;
+	}
+
+	public static int orig(int i) {
+		return (i + 1) % 3;
+	}
+
+	public static int dest(int i) {
+		return (i + 2) % 3;
+	}
+
+	public record Corner(int tIdx, int side) {
+	}
 
 	private record PointKey(double x, double y) implements Comparable<PointKey> {
 		@Override
@@ -79,9 +94,17 @@ public final class Core {
 		}
 	}
 
-	private static int cornerId(int tIdx, int side) { return tIdx * 3 + side; }
-	private static int cornerTri(int cornerId) { return cornerId / 3; }
-	private static int cornerSide(int cornerId) { return cornerId % 3; }
+	private static int cornerId(int tIdx, int side) {
+		return tIdx * 3 + side;
+	}
+
+	private static int cornerTri(int cornerId) {
+		return cornerId / 3;
+	}
+
+	private static int cornerSide(int cornerId) {
+		return cornerId % 3;
+	}
 
 	private static int stepAroundVertex(InputMesh mesh, int vIdx, int cornerId, boolean isCcw) {
 		int tIdx = cornerTri(cornerId);
