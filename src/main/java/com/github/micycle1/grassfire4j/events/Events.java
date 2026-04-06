@@ -363,8 +363,8 @@ public class Events {
 		// Defensive topology cleanup: if an apex/new vertex is no longer referenced by
 		// any active triangle, stop it now so it does not get emitted as an unbounded
 		// ray.
-		stopIfOrphanLocal(v0, now, step, skel, aTri, bTri);
-		stopIfOrphanLocal(kv, now, step, skel, fanA, fanB);
+		stopIfOrphan(v0, now, step, skel);
+		stopIfOrphan(kv, now, step, skel);
 	}
 
 	public static void handleFlip(Event evt, double now, EventQueue q, Deque<Event> imm) {
@@ -560,58 +560,34 @@ public class Events {
 		return false;
 	}
 
-	private static boolean activeContains(KineticTriangle t, KineticVertex v) {
-		if (t == null || t.stopsAt != null) {
-			return false;
+	private static void stopIfOrphan(KineticVertex v, double now, int step, Skeleton skel) {
+		if (v == null || v.stopsAt != null) {
+			return;
 		}
-		VertexRef[] tv = t.vertices;
-		return tv[0] == v || tv[1] == v || tv[2] == v;
+		if (isReferencedByActiveTriangle(v, skel)) {
+			return;
+		}
+		SkeletonNode node = adjacentStoppedNodeAtTime(v, now);
+		if (node != null) {
+			v.stopNode = node;
+			v.stopsAt = now;
+			return;
+		}
+		stopKVertices(List.of(v), step, now, skel, v.positionAt(now));
 	}
 
-	private static boolean activeContainsAny(List<KineticTriangle> tris, KineticVertex v) {
-		for (int i = 0, n = tris.size(); i < n; i++) {
-			KineticTriangle t = tris.get(i);
-			if (t == null || t.stopsAt != null) {
+	private static boolean isReferencedByActiveTriangle(KineticVertex v, Skeleton skel) {
+		for (KineticTriangle tri : skel.triangles) {
+			if (tri.stopsAt != null) {
 				continue;
 			}
-			VertexRef[] tv = t.vertices;
-			if (tv[0] == v || tv[1] == v || tv[2] == v) {
-				return true;
+			for (VertexRef ref : tri.vertices) {
+				if (ref == v) {
+					return true;
+				}
 			}
 		}
 		return false;
-	}
-
-	private static void stopIfOrphanLocal(KineticVertex v, double now, int step, Skeleton skel, KineticTriangle t0, KineticTriangle t1) {
-		if (v == null || v.stopsAt != null) {
-			return;
-		}
-		if (activeContains(t0, v) || activeContains(t1, v)) {
-			return;
-		}
-		SkeletonNode node = adjacentStoppedNodeAtTime(v, now);
-		if (node != null) {
-			v.stopNode = node;
-			v.stopsAt = now;
-			return;
-		}
-		stopKVertices(List.of(v), step, now, skel, v.positionAt(now));
-	}
-
-	private static void stopIfOrphanLocal(KineticVertex v, double now, int step, Skeleton skel, List<KineticTriangle> fanA, List<KineticTriangle> fanB) {
-		if (v == null || v.stopsAt != null) {
-			return;
-		}
-		if (activeContainsAny(fanA, v) || activeContainsAny(fanB, v)) {
-			return;
-		}
-		SkeletonNode node = adjacentStoppedNodeAtTime(v, now);
-		if (node != null) {
-			v.stopNode = node;
-			v.stopsAt = now;
-			return;
-		}
-		stopKVertices(List.of(v), step, now, skel, v.positionAt(now));
 	}
 
 	private static SkeletonNode adjacentStoppedNodeAtTime(KineticVertex v, double now) {
