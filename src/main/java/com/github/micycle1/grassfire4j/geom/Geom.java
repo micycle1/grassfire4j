@@ -16,6 +16,8 @@ public final class Geom {
 	private static final double TIME_UNIQUE_TOL = 1e-9;
 	private static final double NEAR_ZERO_EPS = 1e-8;
 	private static final double NEAR_ZERO_EPS_SQ = NEAR_ZERO_EPS * NEAR_ZERO_EPS;
+	private static final double LEN_REL_EPS = 1e-8;
+	private static final double LEN_ABS_EPS = 1e-12;
 
 	private Geom() {
 	}
@@ -34,6 +36,10 @@ public final class Geom {
 
 	public static boolean nearZeroSq(double valSq) {
 		return Math.abs(valSq) <= NEAR_ZERO_EPS_SQ;
+	}
+
+	public static double lengthTol(double refLen) {
+		return Math.max(LEN_ABS_EPS, LEN_REL_EPS * Math.max(1.0, refLen));
 	}
 
 	public static record Line2(Vector2D w, double b) {

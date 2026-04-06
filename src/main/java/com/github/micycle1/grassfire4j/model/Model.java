@@ -149,6 +149,7 @@ public final class Model {
 		public final WaveFront[] wavefrontSupportLines = new WaveFront[3];
 		public Event event;
 		public int info = 0, uid = 0;
+		public double refLength = 1.0;
 		public Double stopsAt;
 		public boolean internal = false;
 
@@ -273,6 +274,7 @@ public final class Model {
 		public List<SkeletonNode> skNodes = new ArrayList<>();
 		public List<KineticVertex> vertices = new ArrayList<>();
 		public List<KineticTriangle> triangles = new ArrayList<>();
+		public double refLength = 1.0;
 
 		public record BoundaryEdge(Coordinate from, Coordinate to, int edgeId) {
 		}

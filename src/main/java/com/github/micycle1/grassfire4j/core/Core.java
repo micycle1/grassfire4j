@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import org.locationtech.jts.algorithm.Orientation;
 import org.locationtech.jts.geom.Coordinate;
@@ -305,6 +306,10 @@ public final class Core {
 		skel.skNodes.addAll(nodes.values());
 		skel.triangles = ktriangles;
 		skel.boundaryEdges = buildBoundaryEdgesFromMesh(mesh);
+		skel.refLength = computeReferenceLength(skel.boundaryEdges);
+		for (KineticTriangle tri : ktriangles) {
+			tri.refLength = skel.refLength;
+		}
 		return skel;
 	}
 
@@ -319,6 +324,21 @@ public final class Core {
 			out.put(key, Integer.valueOf(uid++));
 		}
 		return out;
+	}
+
+	private static double computeReferenceLength(List<Skeleton.BoundaryEdge> boundaryEdges) {
+		if (boundaryEdges == null || boundaryEdges.isEmpty()) {
+			return 1.0;
+		}
+		List<Double> lengths = boundaryEdges.stream().map(e -> e.from().distance(e.to())).filter(d -> d > 0.0).sorted().collect(Collectors.toList());
+		if (lengths.isEmpty()) {
+			return 1.0;
+		}
+		int mid = lengths.size() / 2;
+		if ((lengths.size() & 1) == 1) {
+			return lengths.get(mid).doubleValue();
+		}
+		return 0.5 * (lengths.get(mid - 1).doubleValue() + lengths.get(mid).doubleValue());
 	}
 
 	/**

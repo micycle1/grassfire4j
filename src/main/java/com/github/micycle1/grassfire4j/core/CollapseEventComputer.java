@@ -5,6 +5,7 @@ import static com.github.micycle1.grassfire4j.core.Core.cw;
 import static com.github.micycle1.grassfire4j.geom.Geom.STOP_EPS;
 import static com.github.micycle1.grassfire4j.geom.Geom.dist2;
 import static com.github.micycle1.grassfire4j.geom.Geom.getUniqueTimes;
+import static com.github.micycle1.grassfire4j.geom.Geom.lengthTol;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZero;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZeroTime;
 import static com.github.micycle1.grassfire4j.geom.Geom.nearZeroSq;
@@ -180,15 +181,33 @@ public class CollapseEventComputer {
 		return new Event(time, t, sideMask(side), EventType.SPLIT, t.getType());
 	}
 
-	private static int classifyCollapsedSidesFromLengths(double[] lengths) {
+	private static int classifyCollapsedSidesFromLengths(double[] lengths, double refLength) {
 		double mn = Math.min(lengths[0], Math.min(lengths[1], lengths[2]));
+		double mx = Math.max(lengths[0], Math.max(lengths[1], lengths[2]));
+		double tol = lengthTol(refLength);
+		if (mx <= tol) {
+			return ALL_SIDES_MASK;
+		}
 		int mask = 0;
+		int minSide = lengths[0] <= lengths[1] ? (lengths[0] <= lengths[2] ? 0 : 2) : (lengths[1] <= lengths[2] ? 1 : 2);
 		for (int i = 0; i < 3; i++) {
-			if (nearZero(lengths[i] - mn)) {
+			if (lengths[i] <= mn + tol) {
 				mask |= sideMask(i);
 			}
 		}
-		return mask;
+		return Integer.bitCount(mask) == 1 ? mask : sideMask(minSide);
+	}
+
+	private static int classifyImmediateEdgeMask(KineticTriangle tri, double time) {
+		KineticVertex o = (KineticVertex) tri.vertices[0];
+		KineticVertex d = (KineticVertex) tri.vertices[1];
+		KineticVertex a = (KineticVertex) tri.vertices[2];
+		double[] lengths = new double[3];
+		sideD2(o, d, a, time, lengths);
+		for (int i = 0; i < 3; i++) {
+			lengths[i] = Math.sqrt(lengths[i]);
+		}
+		return classifyCollapsedSidesFromLengths(lengths, tri.refLength);
 	}
 
 	private static Event finite0(KineticTriangle tri, double now, boolean strictGt) {
@@ -372,7 +391,6 @@ public class CollapseEventComputer {
 
 	private static Event finite2(KineticTriangle tri, double now, boolean strictGt) {
 		KineticVertex o = (KineticVertex) tri.vertices[0], d = (KineticVertex) tri.vertices[1], a = (KineticVertex) tri.vertices[2];
-		double[] l = new double[3];
 		double[] tms = new double[] { Double.NaN, Double.NaN, Double.NaN };
 		for (int i = 0; i < 3; i++) {
 			if (tri.neighbours[i] == null) {
@@ -386,11 +404,16 @@ public class CollapseEventComputer {
 		if (Double.isNaN(t)) {
 			return null;
 		}
-		sideD2(o, d, a, t, l);
+		int coincidentBoundarySides = 0;
 		for (int i = 0; i < 3; i++) {
-			l[i] = Math.sqrt(l[i]);
+			if (tri.neighbours[i] == null && !Double.isNaN(tms[i]) && nearZeroTime(tms[i] - t)) {
+				coincidentBoundarySides++;
+			}
 		}
-		int mask = classifyCollapsedSidesFromLengths(l);
+		if (coincidentBoundarySides >= 2) {
+			return edgeEvt(tri, t, ALL_SIDES_MASK);
+		}
+		int mask = classifyImmediateEdgeMask(tri, t);
 		int zCt = Integer.bitCount(mask);
 		if (zCt == 3) {
 			return edgeEvt(tri, t, ALL_SIDES_MASK);
@@ -398,10 +421,7 @@ public class CollapseEventComputer {
 		if (zCt == 1) {
 			return edgeEvt(tri, t, mask);
 		}
-		if (zCt == 2) {
-			throw new IllegalStateException("2-triangle: impossible configuration (two sides are equal-min)");
-		}
-		return null; // zCt == 0: no edge event classified
+		throw new IllegalStateException("2-triangle: edge classification produced unsupported side mask " + Integer.toBinaryString(mask));
 	}
 
 	private static Event finite3(KineticTriangle tri, double now, boolean strictGt) {
@@ -441,13 +461,7 @@ public class CollapseEventComputer {
 	}
 
 	public static Event computeNewEdgeCollapse(KineticTriangle tri, double time) {
-		KineticVertex o = (KineticVertex) tri.vertices[0], d = (KineticVertex) tri.vertices[1], a = (KineticVertex) tri.vertices[2];
-		double[] l = new double[3];
-		sideD2(o, d, a, time, l);
-		for (int i = 0; i < 3; i++) {
-			l[i] = Math.sqrt(l[i]);
-		}
-		int mask = classifyCollapsedSidesFromLengths(l);
+		int mask = classifyImmediateEdgeMask(tri, time);
 		return edgeEvt(tri, time, mask);
 	}
 }
