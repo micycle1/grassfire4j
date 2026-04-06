@@ -45,6 +45,12 @@ public class Events {
 	private Events() {
 	}
 
+	private record ParallelFanState(List<KineticTriangle> fan, KineticVertex pivot, IntUnaryOperator direction) {
+	}
+
+	private record ParallelFanEnds(KineticTriangle left, int leftLegIdx, double leftDist, KineticTriangle right, int rightLegIdx, double rightDist) {
+	}
+
 	public static class EventQueue {
 		private final PriorityQueue<Event> heap = new PriorityQueue<>();
 		private long counter = 0;
@@ -420,38 +426,106 @@ public class Events {
 
 	private static void handleParallelFan(List<KineticTriangle> fan, KineticVertex pivot, double now, IntUnaryOperator direction, int step, Skeleton skel,
 			EventQueue q, Deque<Event> imm) {
-		if (fan == null || fan.isEmpty()) {
-			throw new IllegalArgumentException("expected fan of triangles");
-		}
-		if (!pivot.infFast) {
-			return;
-		}
+		ParallelFanState state = new ParallelFanState(fan, pivot, direction);
+		while (state != null && state.pivot.infFast) {
+			if (state.fan == null || state.fan.isEmpty()) {
+				throw new IllegalArgumentException("expected fan of triangles");
+			}
 
-		KineticTriangle firstTri = fan.get(0);
-		if (firstTri.getType() == 3) {
-			double[] dists = new double[3];
-			for (int side = 0; side < 3; side++) {
-				VertexRef s = firstTri.vertices[ccw(side)];
-				VertexRef e = firstTri.vertices[cw(side)];
-				dists[side] = s.positionAt(now).distance(e.positionAt(now));
-			}
-			double mn = Math.min(dists[0], Math.min(dists[1], dists[2]));
-			int ct = 0, idx = -1;
-			for (int i = 0; i < 3; i++) {
-				if (nearZero(dists[i] - mn)) {
-					ct++;
-					idx = i;
+			KineticTriangle firstTri = state.fan.get(0);
+			if (firstTri.getType() == 3) {
+				double[] dists = new double[3];
+				for (int side = 0; side < 3; side++) {
+					VertexRef s = firstTri.vertices[ccw(side)];
+					VertexRef e = firstTri.vertices[cw(side)];
+					dists[side] = s.positionAt(now).distance(e.positionAt(now));
 				}
-			}
-			if (nearZero(mn) && ct == 1) {
-				KineticVertex pivot2 = (KineticVertex) firstTri.vertices[idx];
-				handleParallelEdgeEventEvenLegs(firstTri, idx, pivot2, now, step, skel, q, imm);
+				double mn = Math.min(dists[0], Math.min(dists[1], dists[2]));
+				int ct = 0, idx = -1;
+				for (int i = 0; i < 3; i++) {
+					if (nearZero(dists[i] - mn)) {
+						ct++;
+						idx = i;
+					}
+				}
+				if (nearZero(mn) && ct == 1) {
+					KineticVertex pivot2 = (KineticVertex) firstTri.vertices[idx];
+					handleParallelEdgeEventEvenLegs(firstTri, idx, pivot2, now, step, skel, q, imm);
+				} else {
+					handleParallelEdgeEvent3Tri(firstTri, firstTri.indexOfVertex(state.pivot), state.pivot, now, step, skel, q, imm);
+				}
 				return;
 			}
-			handleParallelEdgeEvent3Tri(firstTri, firstTri.indexOfVertex(pivot), pivot, now, step, skel, q, imm);
-			return;
-		}
 
+			ParallelFanEnds ends = parallelFanEnds(state.fan, state.pivot, state.direction, now);
+			double mn = Math.min(ends.leftDist, ends.rightDist);
+			boolean leftMin = nearZero(ends.leftDist - mn);
+			boolean rightMin = nearZero(ends.rightDist - mn);
+
+			if (leftMin && rightMin) {
+				if (state.fan.size() == 1) {
+					handleParallelEdgeEventEvenLegs(firstTri, firstTri.indexOfVertex(state.pivot), state.pivot, now, step, skel, q, imm);
+					return;
+				}
+				if (state.fan.size() == 2) {
+					boolean all2 = true;
+					for (KineticTriangle t : state.fan) {
+						int lIdx = ccw(t.indexOfVertex(state.pivot));
+						int rIdx = cw(t.indexOfVertex(state.pivot));
+						VertexRef l1 = t.vertices[ccw(lIdx)], l2 = t.vertices[cw(lIdx)];
+						VertexRef r1 = t.vertices[ccw(rIdx)], r2 = t.vertices[cw(rIdx)];
+						double ld = l1.positionAt(now).distance(l2.positionAt(now));
+						double rd = r1.positionAt(now).distance(r2.positionAt(now));
+						double mm = Math.min(ld, rd);
+						int u = 0;
+						if (nearZero(ld - mm)) {
+							u++;
+						}
+						if (nearZero(rd - mm)) {
+							u++;
+						}
+						if (u != 2) {
+							all2 = false;
+						}
+					}
+					if (all2) {
+						for (KineticTriangle t : state.fan) {
+							handleParallelEdgeEventEvenLegs(t, t.indexOfVertex(state.pivot), state.pivot, now, step, skel, q, imm);
+						}
+					} else {
+						KineticTriangle t0 = state.fan.get(0), t1 = state.fan.get(1);
+						int side0 = t0.indexOfNeighbour(t1);
+						int side1 = t1.indexOfNeighbour(t0);
+						flip(t0, side0, t1, side1);
+						if (hasInfFast(t0)) {
+							handleParallelEdgeEventEvenLegs(t0, t0.indexOfVertex(state.pivot), state.pivot, now, step, skel, q, imm);
+						}
+						if (hasInfFast(t1)) {
+							handleParallelEdgeEventEvenLegs(t1, t1.indexOfVertex(state.pivot), state.pivot, now, step, skel, q, imm);
+						}
+					}
+					return;
+				}
+
+				ParallelFanState next = parallelShorterLegStep(ends.left, ends.leftLegIdx, state.pivot, now, step, skel, q, imm);
+				if (next == null || !next.pivot.infFast) {
+					return;
+				}
+				ParallelFanEnds nextEnds = parallelFanEnds(next.fan, next.pivot, next.direction, now);
+				next = parallelShorterLegStep(nextEnds.right, nextEnds.rightLegIdx, next.pivot, now, step, skel, q, imm);
+				if (next == null || !next.pivot.infFast) {
+					return;
+				}
+				state = next;
+				continue;
+			}
+
+			state = rightMin ? parallelShorterLegStep(ends.right, ends.rightLegIdx, state.pivot, now, step, skel, q, imm)
+					: parallelShorterLegStep(ends.left, ends.leftLegIdx, state.pivot, now, step, skel, q, imm);
+		}
+	}
+
+	private static ParallelFanEnds parallelFanEnds(List<KineticTriangle> fan, KineticVertex pivot, IntUnaryOperator direction, double now) {
 		int d0 = direction.applyAsInt(0);
 		final boolean isCw;
 		if (d0 == 2) {
@@ -473,62 +547,7 @@ public class Events {
 		VertexRef vrs = right.vertices[ccw(rightLegIdx)];
 		VertexRef vre = right.vertices[cw(rightLegIdx)];
 		double rightDist = vrs.positionAt(now).distance(vre.positionAt(now));
-
-		double mn = Math.min(leftDist, rightDist);
-		boolean leftMin = nearZero(leftDist - mn);
-		boolean rightMin = nearZero(rightDist - mn);
-
-		if (leftMin && rightMin) {
-			if (fan.size() == 1) {
-				handleParallelEdgeEventEvenLegs(firstTri, firstTri.indexOfVertex(pivot), pivot, now, step, skel, q, imm);
-			} else if (fan.size() == 2) {
-				boolean all2 = true;
-				for (KineticTriangle t : fan) {
-					int lIdx = ccw(t.indexOfVertex(pivot));
-					int rIdx = cw(t.indexOfVertex(pivot));
-					VertexRef l1 = t.vertices[ccw(lIdx)], l2 = t.vertices[cw(lIdx)];
-					VertexRef r1 = t.vertices[ccw(rIdx)], r2 = t.vertices[cw(rIdx)];
-					double ld = l1.positionAt(now).distance(l2.positionAt(now));
-					double rd = r1.positionAt(now).distance(r2.positionAt(now));
-					double mm = Math.min(ld, rd);
-					int u = 0;
-					if (nearZero(ld - mm)) {
-						u++;
-					}
-					if (nearZero(rd - mm)) {
-						u++;
-					}
-					if (u != 2) {
-						all2 = false;
-					}
-				}
-				if (all2) {
-					for (KineticTriangle t : fan) {
-						handleParallelEdgeEventEvenLegs(t, t.indexOfVertex(pivot), pivot, now, step, skel, q, imm);
-					}
-				} else {
-					KineticTriangle t0 = fan.get(0), t1 = fan.get(1);
-					int side0 = t0.indexOfNeighbour(t1);
-					int side1 = t1.indexOfNeighbour(t0);
-					flip(t0, side0, t1, side1);
-					if (hasInfFast(t0)) {
-						handleParallelEdgeEventEvenLegs(t0, t0.indexOfVertex(pivot), pivot, now, step, skel, q, imm);
-					}
-					if (hasInfFast(t1)) {
-						handleParallelEdgeEventEvenLegs(t1, t1.indexOfVertex(pivot), pivot, now, step, skel, q, imm);
-					}
-				}
-			} else {
-				throw new UnsupportedOperationException("More than 2 triangles in equal-legs parallel fan");
-			}
-			return;
-		}
-
-		if (rightMin) {
-			handleParallelEdgeEventShorterLeg(right, rightLegIdx, pivot, now, step, skel, q, imm);
-		} else {
-			handleParallelEdgeEventShorterLeg(left, leftLegIdx, pivot, now, step, skel, q, imm);
-		}
+		return new ParallelFanEnds(left, leftLegIdx, leftDist, right, rightLegIdx, rightDist);
 	}
 
 	private static boolean hasInfFast(KineticTriangle t) {
@@ -595,7 +614,7 @@ public class Events {
 		return nearZeroTime(kv.stopsAt - now) ? kv.stopNode : null;
 	}
 
-	private static void handleParallelEdgeEventShorterLeg(KineticTriangle t, int e, KineticVertex pivot, double now, int step, Skeleton skel, EventQueue q,
+	private static ParallelFanState parallelShorterLegStep(KineticTriangle t, int e, KineticVertex pivot, double now, int step, Skeleton skel, EventQueue q,
 			Deque<Event> imm) {
 		KineticVertex v1 = (KineticVertex) t.vertices[ccw(e)];
 		KineticVertex v2 = (KineticVertex) t.vertices[cw(e)];
@@ -613,7 +632,7 @@ public class Events {
 
 		SkeletonNode skNode = (!toStop.isEmpty()) ? toStop.get(0).stopNode : (pivot.stopNode != null ? pivot.stopNode : pivot.startNode);
 		if (skNode == null) {
-			return;
+			return null;
 		}
 
 		if (pivot.stopNode == null) {
@@ -666,18 +685,22 @@ public class Events {
 			}
 		}
 
-		if (kv.infFast) {
-			if (!fanA.isEmpty() && !fanB.isEmpty()) {
-				ArrayList<KineticTriangle> fan = new ArrayList<>(fanA);
-				Collections.reverse(fan);
-				fan.addAll(fanB);
-				handleParallelFan(fan, kv, now, Core::ccw, step, skel, q, imm);
-			} else if (!fanA.isEmpty()) {
-				handleParallelFan(new ArrayList<>(fanA), kv, now, Core::cw, step, skel, q, imm);
-			} else if (!fanB.isEmpty()) {
-				handleParallelFan(new ArrayList<>(fanB), kv, now, Core::ccw, step, skel, q, imm);
-			}
+		if (!kv.infFast) {
+			return null;
 		}
+		if (!fanA.isEmpty() && !fanB.isEmpty()) {
+			ArrayList<KineticTriangle> nextFan = new ArrayList<>(fanA);
+			Collections.reverse(nextFan);
+			nextFan.addAll(fanB);
+			return new ParallelFanState(nextFan, kv, Core::ccw);
+		}
+		if (!fanA.isEmpty()) {
+			return new ParallelFanState(new ArrayList<>(fanA), kv, Core::cw);
+		}
+		if (!fanB.isEmpty()) {
+			return new ParallelFanState(new ArrayList<>(fanB), kv, Core::ccw);
+		}
+		return null;
 	}
 
 	private static void handleParallelEdgeEventEvenLegs(KineticTriangle t, int e, KineticVertex pivot, double now, int step, Skeleton skel, EventQueue q,
