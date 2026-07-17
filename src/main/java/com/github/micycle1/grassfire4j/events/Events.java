@@ -362,9 +362,10 @@ public class Events {
 
 		// Defensive topology cleanup: if an apex/new vertex is no longer referenced by
 		// any active triangle, stop it now so it does not get emitted as an unbounded
-		// ray.
-		stopIfOrphan(v0, now, step, skel);
-		stopIfOrphan(kv, now, step, skel);
+		// ray. The local triangles are passed as hints so the common (still-active)
+		// case avoids a full scan of the triangulation.
+		stopIfOrphan(v0, now, step, skel, aTri, bTri);
+		stopIfOrphan(kv, now, step, skel, fanA, fanB);
 	}
 
 	public static void handleFlip(Event evt, double now, EventQueue q, Deque<Event> imm) {
@@ -425,6 +426,12 @@ public class Events {
 		}
 	}
 
+	/**
+	 * Collapses a fan of triangles around an infinitely fast pivot vertex.
+	 * Iterates (rather than recurses) because each shorter-leg step may yield a
+	 * new inf-fast pivot with its own fan; the loop terminates because every step
+	 * permanently stops at least one triangle.
+	 */
 	private static void handleParallelFan(List<KineticTriangle> fan, KineticVertex pivot, double now, IntUnaryOperator direction, int step, Skeleton skel,
 			EventQueue q, Deque<Event> imm) {
 		ParallelFanState state = new ParallelFanState(fan, pivot, direction);
@@ -469,26 +476,7 @@ public class Events {
 					return;
 				}
 				if (state.fan.size() == 2) {
-					boolean all2 = true;
-					for (KineticTriangle t : state.fan) {
-						int lIdx = ccw(t.indexOfVertex(state.pivot));
-						int rIdx = cw(t.indexOfVertex(state.pivot));
-						VertexRef l1 = t.vertices[ccw(lIdx)], l2 = t.vertices[cw(lIdx)];
-						VertexRef r1 = t.vertices[ccw(rIdx)], r2 = t.vertices[cw(rIdx)];
-						double ld = l1.positionAt(now).distance(l2.positionAt(now));
-						double rd = r1.positionAt(now).distance(r2.positionAt(now));
-						double mm = Math.min(ld, rd);
-						int u = 0;
-						if (nearZero(ld - mm)) {
-							u++;
-						}
-						if (nearZero(rd - mm)) {
-							u++;
-						}
-						if (u != 2) {
-							all2 = false;
-						}
-					}
+					boolean all2 = hasEqualLegs(state.fan.get(0), state.pivot, now) && hasEqualLegs(state.fan.get(1), state.pivot, now);
 					if (all2) {
 						for (KineticTriangle t : state.fan) {
 							handleParallelEdgeEventEvenLegs(t, t.indexOfVertex(state.pivot), state.pivot, now, step, skel, q, imm);
@@ -508,6 +496,9 @@ public class Events {
 					return;
 				}
 
+				// Symmetric fan of 3+ triangles: both outer legs are tied for the
+				// minimum, so peel one triangle off each end and re-examine the
+				// shrunken fan around the surviving pivot.
 				ParallelFanState next = parallelShorterLegStep(ends.left, ends.leftLegIdx, state.pivot, now, step, skel, q, imm);
 				if (next == null || !next.pivot.infFast) {
 					return;
@@ -551,6 +542,18 @@ public class Events {
 		return new ParallelFanEnds(left, leftLegIdx, leftDist, right, rightLegIdx, rightDist);
 	}
 
+	/**
+	 * True when the two wavefront legs of {@code t} flanking {@code pivot} have
+	 * near-equal length at time {@code now}.
+	 */
+	private static boolean hasEqualLegs(KineticTriangle t, KineticVertex pivot, double now) {
+		int lIdx = ccw(t.indexOfVertex(pivot));
+		int rIdx = cw(t.indexOfVertex(pivot));
+		double ld = t.vertices[ccw(lIdx)].positionAt(now).distance(t.vertices[cw(lIdx)].positionAt(now));
+		double rd = t.vertices[ccw(rIdx)].positionAt(now).distance(t.vertices[cw(rIdx)].positionAt(now));
+		return nearZero(ld - rd);
+	}
+
 	private static boolean hasInfFast(KineticTriangle t) {
 		for (VertexRef v : t.vertices) {
 			if (v instanceof KineticVertex && ((KineticVertex) v).infFast) {
@@ -560,13 +563,42 @@ public class Events {
 		return false;
 	}
 
-	private static void stopIfOrphan(KineticVertex v, double now, int step, Skeleton skel) {
+	/**
+	 * Stops {@code v} if it is no longer referenced by any active triangle. The
+	 * hint triangles are checked first: finding {@code v} in an active hint proves
+	 * it is still live without scanning the whole triangulation. The hints are
+	 * only ever used as a positive proof — declaring a vertex orphaned always
+	 * requires the exhaustive scan, so an incomplete hint set cannot cause a live
+	 * vertex to be stopped prematurely (the flaw that sank an earlier local-only
+	 * variant of this check).
+	 */
+	private static void stopIfOrphan(KineticVertex v, double now, int step, Skeleton skel, KineticTriangle hintA, KineticTriangle hintB) {
 		if (v == null || v.stopsAt != null) {
+			return;
+		}
+		if (activeContains(hintA, v) || activeContains(hintB, v)) {
 			return;
 		}
 		if (isReferencedByActiveTriangle(v, skel)) {
 			return;
 		}
+		stopOrphan(v, now, step, skel);
+	}
+
+	private static void stopIfOrphan(KineticVertex v, double now, int step, Skeleton skel, List<KineticTriangle> hintsA, List<KineticTriangle> hintsB) {
+		if (v == null || v.stopsAt != null) {
+			return;
+		}
+		if (activeContainsAny(hintsA, v) || activeContainsAny(hintsB, v)) {
+			return;
+		}
+		if (isReferencedByActiveTriangle(v, skel)) {
+			return;
+		}
+		stopOrphan(v, now, step, skel);
+	}
+
+	private static void stopOrphan(KineticVertex v, double now, int step, Skeleton skel) {
 		SkeletonNode node = adjacentStoppedNodeAtTime(v, now);
 		if (node != null) {
 			v.stopNode = node;
@@ -574,6 +606,22 @@ public class Events {
 			return;
 		}
 		stopKVertices(List.of(v), step, now, skel, v.positionAt(now));
+	}
+
+	private static boolean activeContains(KineticTriangle t, KineticVertex v) {
+		if (t == null || t.stopsAt != null) {
+			return false;
+		}
+		return t.vertices[0] == v || t.vertices[1] == v || t.vertices[2] == v;
+	}
+
+	private static boolean activeContainsAny(List<KineticTriangle> tris, KineticVertex v) {
+		for (KineticTriangle t : tris) {
+			if (activeContains(t, v)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static boolean isReferencedByActiveTriangle(KineticVertex v, Skeleton skel) {

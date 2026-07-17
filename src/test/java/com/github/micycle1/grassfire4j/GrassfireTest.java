@@ -290,7 +290,7 @@ class GrassfireTest {
 			}
 
 			for (PointKey v : inputVertices) {
-				assertFalse(!skeletonEndpoints.contains(v), "Input vertex " + v + " not found in skeleton endpoints for " + csvFile.getFileName());
+				assertTrue(skeletonEndpoints.contains(v), "Input vertex " + v + " not found in skeleton endpoints for " + csvFile.getFileName());
 			}
 
 			HPRtree tree = new HPRtree();
