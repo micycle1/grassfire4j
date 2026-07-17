@@ -213,7 +213,15 @@ public final class Core {
 		Skeleton skel = new Skeleton();
 		Map<Integer, SkeletonNode> nodes = new HashMap<>();
 		Map<Integer, InfiniteVertex> infNodes = new HashMap<>();
-		Map<TriangleKey, Integer> canonicalUids = canonicalTriangleUids(mesh);
+		// Compute each triangle's canonical key once and reuse it for both the
+		// UID assignment and the per-triangle lookup below (previously computed
+		// twice per triangle, each time allocating 3 PointKeys and sorting).
+		int triCount = mesh.triangles.size();
+		TriangleKey[] triKeys = new TriangleKey[triCount];
+		for (int i = 0; i < triCount; i++) {
+			triKeys[i] = TriangleKey.from(mesh, mesh.triangles.get(i));
+		}
+		Map<TriangleKey, Integer> canonicalUids = canonicalTriangleUids(triKeys);
 		double sumX = 0, sumY = 0;
 		int count = 0;
 
@@ -234,7 +242,7 @@ public final class Core {
 		for (int i = 0; i < mesh.triangles.size(); i++) {
 			KineticTriangle k = new KineticTriangle();
 			k.info = i + 1;
-			k.uid = canonicalUids.get(TriangleKey.from(mesh, mesh.triangles.get(i))).intValue();
+			k.uid = canonicalUids.get(triKeys[i]).intValue();
 			k.internal = mesh.triangles.get(i).isInternal;
 			ktriangles.add(k);
 		}
@@ -336,12 +344,12 @@ public final class Core {
 		return skel;
 	}
 
-	private static Map<TriangleKey, Integer> canonicalTriangleUids(InputMesh mesh) {
-		Map<TriangleKey, Integer> out = new HashMap<>();
+	private static Map<TriangleKey, Integer> canonicalTriangleUids(TriangleKey[] triKeys) {
 		TreeMap<TriangleKey, Integer> ordered = new TreeMap<>();
-		for (InputTriangle tri : mesh.triangles) {
-			ordered.putIfAbsent(TriangleKey.from(mesh, tri), Integer.valueOf(0));
+		for (TriangleKey key : triKeys) {
+			ordered.putIfAbsent(key, Integer.valueOf(0));
 		}
+		Map<TriangleKey, Integer> out = new HashMap<>(ordered.size() * 2);
 		int uid = 1;
 		for (TriangleKey key : ordered.keySet()) {
 			out.put(key, Integer.valueOf(uid++));

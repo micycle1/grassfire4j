@@ -52,17 +52,30 @@ public class Events {
 	}
 
 	public static class EventQueue {
+		private static final int PURGE_MIN_STALE = 64;
+
 		private final PriorityQueue<Event> heap = new PriorityQueue<>();
 		private long counter = 0;
+		private int stale = 0;
 
 		public void add(Event item) {
 			item.valid = true;
 			item.counter = counter++;
 			heap.add(item);
+			// Discards are lazy (valid=false), so cancelled events linger in the
+			// heap and inflate every sift. Rebuild once they exceed half the heap;
+			// since each rebuild resets the count, purges cost O(n) at most once
+			// per ~n/2 discards, i.e. amortised O(1) per discard.
+			if (stale > PURGE_MIN_STALE && stale > (heap.size() >> 1)) {
+				purge();
+			}
 		}
 
 		public void discard(Event item) {
-			item.valid = false;
+			if (item.valid) {
+				item.valid = false;
+				stale++;
+			}
 		}
 
 		public Event pop() {
@@ -71,6 +84,7 @@ public class Events {
 				if (item.valid) {
 					return item;
 				}
+				stale--;
 			}
 			return null;
 		}
@@ -78,8 +92,21 @@ public class Events {
 		public boolean isEmpty() {
 			while (!heap.isEmpty() && !heap.peek().valid) {
 				heap.poll();
+				stale--;
 			}
 			return heap.isEmpty();
+		}
+
+		private void purge() {
+			List<Event> live = new ArrayList<>(heap.size());
+			for (Event e : heap) {
+				if (e.valid) {
+					live.add(e);
+				}
+			}
+			heap.clear();
+			heap.addAll(live);
+			stale = 0;
 		}
 	}
 
